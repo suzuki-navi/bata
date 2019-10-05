@@ -149,11 +149,75 @@ class ObjectPage(Page):
 class GlobalPage(MenuPage):
     def items(self):
         return [
+            ("cloudwatch", CloudWatchPage),
             ("ecr", ECRPage),
             ("glue", GluePage),
             ("lambda", LambdaPage),
             ("s3", S3Page),
         ]
+
+####################################################################################################
+
+class CloudWatchPage(MenuPage):
+    def items(self):
+        return [
+            ("logs", CloudWatchLogsPage),
+        ]
+
+class CloudWatchLogsPage(ItemsPage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("logs", region_name = region)
+        ls = client.describe_log_groups(
+        )
+        items = []
+        for elem in ls["logGroups"]:
+            items.append([elem["logGroupName"]])
+        return items
+
+    def detailPage(self, item):
+        return CloudWatchLogStreamsPage(item[0])
+
+class CloudWatchLogStreamsPage(ItemsPage):
+    def __init__(self, log_group_name):
+        self.log_group_name = log_group_name
+
+    def items(self):
+        client = session.client("logs", region_name = region)
+        ls = client.describe_log_streams(
+            logGroupName = self.log_group_name,
+            orderBy = 'LastEventTime',
+            descending = True,
+        )
+        items = []
+        for elem in ls["logStreams"]:
+            items.append([elem["logStreamName"], elem["firstEventTimestamp"], elem["lastIngestionTime"]])
+        return items
+
+    def detailPage(self, item):
+        return CloudWatchLogStreamEventsPage(self.log_group_name, item[0])
+
+class CloudWatchLogStreamEventsPage(ItemsPage):
+    def __init__(self, log_group_name, log_stream_name):
+        self.log_group_name = log_group_name
+        self.log_stream_name = log_stream_name
+
+    def items(self):
+        client = session.client("logs", region_name = region)
+        ls = client.get_log_events(
+            logGroupName = self.log_group_name,
+            logStreamName = self.log_stream_name,
+        )
+        items = []
+        for elem in ls["events"]:
+            items.append([elem["timestamp"], elem["ingestionTime"], elem["message"]])
+        return items
+
+    #def detailPage(self, item):
+    #    return CloudWatchLogStreamsPage(item[0])
+
 
 ####################################################################################################
 

@@ -2,6 +2,7 @@
 import sys
 import json
 import boto3
+import botocore
 from datetime import datetime
 
 session = boto3.session.Session()
@@ -23,10 +24,12 @@ def print_dump(obj):
 
 class Page:
     def dig(self, arg):
-        return NonePage()
+        sys.stderr.write("Unknown object: {}".format(arg))
+        sys.exit(1)
 
     def meta(self):
-        pass
+        sys.stderr.write("meta page not found")
+        sys.exit(1)
 
     def view(self):
         pass
@@ -40,7 +43,7 @@ class Page:
         elif args[-1] == "--help":
             self.help()
         elif args[-1] == "--meta":
-            self.meta()
+            self.digs(args).view()
         #elif args[-1] == "--create":
         #    self.digs(args[0:-1]).create()
         #elif args[-1] == "--update":
@@ -56,7 +59,14 @@ class Page:
     def digs(self, args):
         page = self
         while len(args) > 0:
-            page = page.dig(args[0])
+            a = args[0]
+            if a == "--meta":
+                page = page.meta()
+            elif a.startswith("-"):
+                sys.stderr.write("Unknown option: {}".format(args[-1]))
+                sys.exit(1)
+            else:
+                page = page.dig(a)
             args = args[1:]
         return page
 
@@ -68,11 +78,14 @@ class MenuPage(Page):
     def items(self):
         return []
 
+    def detailPage(self, item):
+        return item[1]()
+
     def dig(self, arg):
         items = self.items()
         for item in items:
             if item[0] == arg:
-                return item[1]()
+                return self.detailPage(item)
         sys.stderr.write("Not found: {}".format(arg))
         sys.exit(1)
 
@@ -82,6 +95,9 @@ class MenuPage(Page):
             print(item[0])
 
 class ItemsPage(Page):
+    def meta(self):
+        return super().meta()
+
     def nameColIdx(self):
         return 0
 
@@ -95,9 +111,9 @@ class ItemsPage(Page):
         items = self.items()
         nameColIdx = self.nameColIdx()
         for item in items:
-            if item[nameColIdx] == args[0]:
+            if item[nameColIdx] == arg:
                 return self.detailPage(item)
-        sys.stderr.write("Not found: {}".format(args[0]))
+        sys.stderr.write("Not found: {}".format(arg))
         sys.exit(1)
 
     def view(self):
@@ -105,9 +121,20 @@ class ItemsPage(Page):
         for item in items:
             print(item)
 
+class ObjectPage(Page):
+    def object(self):
+        return None
+
+    def view(self):
+        meta = self.object()
+        print_dump(meta)
+
 class GlobalPage(MenuPage):
     def items(self):
-        return [("s3", S3Page)]
+        return [
+            ("s3", S3Page),
+            ("lambda", LambdaPage),
+        ]
 
 class S3Page(MenuPage):
     def items(self):
@@ -126,9 +153,135 @@ class S3BucketsPage(ItemsPage):
         return items
 
     def detailPage(self, item):
-        return NonePage()
+        return S3DirPage(item[0], "")
+
+class S3BucketMetaPage(MenuPage):
+    def __init__(self, bucket_name):
+        self.bucket_name = bucket_name
+
+    def detailPage(self, item):
+        return item[1](self.bucket_name)
+
+    def items(self):
+        return [
+            ("versioning", S3BucketMetaVersioningPage),
+            ("policy", S3BucketMetaPolicyPage),
+        ]
+
+class S3BucketMetaVersioningPage(ObjectPage):
+    def __init__(self, bucket_name):
+        self.bucket_name = bucket_name
+
+    def object(self):
+        client = session.client("s3")
+        meta = client.get_bucket_versioning(
+            Bucket = self.bucket_name,
+        )
+        del(meta["ResponseMetadata"])
+        return meta
+
+class S3BucketMetaPolicyPage(ObjectPage):
+    def __init__(self, bucket_name):
+        self.bucket_name = bucket_name
+
+    def object(self):
+        client = session.client("s3")
+        try:
+            meta = client.get_bucket_policy(
+                Bucket = self.bucket_name,
+            )
+            json_str = meta["Policy"]
+            meta2 = json.loads(json_str)
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchBucketPolicy":
+                meta2 = None
+            else:
+                raise e
+        return meta2
+
+class S3DirPage(ItemsPage):
+    def __init__(self, bucket_name, path):
+        self.bucket_name = bucket_name
+        self.path = path
+
+    def meta(self):
+        if self.path == "":
+            return S3BucketMetaPage(self.bucket_name)
+        else:
+            return super().meta()
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("s3")
+        if self.path == "":
+            prefix = ""
+        else:
+            prefix = self.path + "/"
+        ls = client.list_objects_v2(
+            Bucket = self.bucket_name,
+            Delimiter = "/",
+            Prefix = prefix,
+        )
+        items = []
+        if "CommonPrefixes" in ls:
+            for elem in ls["CommonPrefixes"]:
+                name = elem["Prefix"]
+                if name.endswith("/"):
+                    name = name[0:-1]
+                items.append([name, "", "", ""])
+        if "Contents" in ls:
+            len_prefix = len(prefix)
+            for elem in ls["Contents"]:
+                name = elem["Key"]
+                if name.startswith(prefix):
+                    name = name[len_prefix : ]
+                items.append([name, elem["LastModified"], elem["Size"], elem["StorageClass"]])
+        return items
+
+    def detailPage(self, item):
+        if self.path == "":
+            prefix = ""
+        else:
+            prefix = self.path + "/"
+        path = prefix + item[0]
+        if item[1] == "":
+            return NonePage()
+        else:
+            return S3DirPage(self.bucket_name, path)
+
+class LambdaPage(MenuPage):
+    def items(self):
+        return [("functions", LambdaFunctionsPage)]
+
+class LambdaFunctionsPage(ItemsPage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("lambda")
+        ls = client.list_functions()
+        items = []
+        for elem in ls["Functions"]:
+            items.append([elem["FunctionName"]])
+        return items
+
+    def detailPage(self, item):
+        return LambdaFunctionPage(item[0])
 
 
+class LambdaFunctionPage(ObjectPage):
+    def __init__(self, function_name):
+        self.function_name = function_name
+
+    def object(self):
+        client = session.client("lambda")
+        meta = client.get_function(
+            FunctionName = self.function_name,
+        )
+        del(meta["ResponseMetadata"])
+        return meta
 
 GlobalPage().exec(args)
 

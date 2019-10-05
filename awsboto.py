@@ -7,6 +7,7 @@ from datetime import datetime
 
 session = boto3.session.Session()
 args = sys.argv[1:]
+region = "ap-northeast-1" # TODO
 
 if len(args) > 1 and args[0] == "--profile":
     session = boto3.session.Session(profile_name = args[1])
@@ -22,14 +23,15 @@ def json_dump(obj):
 def print_dump(obj):
     print(json_dump(obj))
 
+####################################################################################################
+
 class Page:
     def dig(self, arg):
         sys.stderr.write("Unknown object: {}".format(arg))
         sys.exit(1)
 
     def meta(self):
-        sys.stderr.write("meta page not found")
-        sys.exit(1)
+        return None
 
     def view(self):
         pass
@@ -62,6 +64,9 @@ class Page:
             a = args[0]
             if a == "--meta":
                 page = page.meta()
+                if page == None:
+                    sys.stderr.write("meta page not found")
+                    sys.exit(1)
             elif a.startswith("-"):
                 sys.stderr.write("Unknown option: {}".format(args[-1]))
                 sys.exit(1)
@@ -71,8 +76,9 @@ class Page:
         return page
 
 class NonePage(Page):
-    def get(self, args):
-        pass
+    pass
+
+####################################################################################################
 
 class MenuPage(Page):
     def items(self):
@@ -122,12 +128,20 @@ class ItemsPage(Page):
             print(item)
 
 class ObjectPage(Page):
+    def meta(self):
+        return super().meta()
+
     def object(self):
         return None
 
     def view(self):
+        if sys.stdout.isatty():
+            if self.meta() != None:
+                print("# --meta exists.")
         meta = self.object()
         print_dump(meta)
+
+####################################################################################################
 
 class GlobalPage(MenuPage):
     def items(self):
@@ -135,6 +149,67 @@ class GlobalPage(MenuPage):
             ("s3", S3Page),
             ("lambda", LambdaPage),
         ]
+
+####################################################################################################
+
+class LambdaPage(MenuPage):
+    def items(self):
+        return [("functions", LambdaFunctionsPage)]
+
+class LambdaFunctionsPage(ItemsPage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("lambda", region_name = region)
+        ls = client.list_functions()
+        items = []
+        for elem in ls["Functions"]:
+            items.append([elem["FunctionName"]])
+        return items
+
+    def detailPage(self, item):
+        return LambdaFunctionPage(item[0])
+
+
+class LambdaFunctionPage(MenuPage):
+    def __init__(self, function_name):
+        self.function_name = function_name
+
+    def items(self):
+        return [
+            ("configuration", LambdaFunctionConfigurationPage),
+            ("aliases", LambdaFunctionAliasesPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.function_name)
+
+class LambdaFunctionConfigurationPage(ObjectPage):
+    def __init__(self, function_name):
+        self.function_name = function_name
+
+    def object(self):
+        client = session.client("lambda", region_name = region)
+        meta = client.get_function(
+            FunctionName = self.function_name,
+        )
+        del(meta["ResponseMetadata"])
+        return meta
+
+class LambdaFunctionAliasesPage(ObjectPage):
+    def __init__(self, function_name):
+        self.function_name = function_name
+
+    def object(self):
+        client = session.client("lambda", region_name = region)
+        meta = client.list_aliases(
+            FunctionName = self.function_name,
+        )
+        del(meta["ResponseMetadata"])
+        return meta
+
+####################################################################################################
 
 class S3Page(MenuPage):
     def items(self):
@@ -159,14 +234,14 @@ class S3BucketMetaPage(MenuPage):
     def __init__(self, bucket_name):
         self.bucket_name = bucket_name
 
-    def detailPage(self, item):
-        return item[1](self.bucket_name)
-
     def items(self):
         return [
             ("versioning", S3BucketMetaVersioningPage),
             ("policy", S3BucketMetaPolicyPage),
         ]
+
+    def detailPage(self, item):
+        return item[1](self.bucket_name)
 
 class S3BucketMetaVersioningPage(ObjectPage):
     def __init__(self, bucket_name):
@@ -251,37 +326,8 @@ class S3DirPage(ItemsPage):
         else:
             return S3DirPage(self.bucket_name, path)
 
-class LambdaPage(MenuPage):
-    def items(self):
-        return [("functions", LambdaFunctionsPage)]
-
-class LambdaFunctionsPage(ItemsPage):
-    def nameColIdx(self):
-        return 0
-
-    def items(self):
-        client = session.client("lambda")
-        ls = client.list_functions()
-        items = []
-        for elem in ls["Functions"]:
-            items.append([elem["FunctionName"]])
-        return items
-
-    def detailPage(self, item):
-        return LambdaFunctionPage(item[0])
-
-
-class LambdaFunctionPage(ObjectPage):
-    def __init__(self, function_name):
-        self.function_name = function_name
-
-    def object(self):
-        client = session.client("lambda")
-        meta = client.get_function(
-            FunctionName = self.function_name,
-        )
-        del(meta["ResponseMetadata"])
-        return meta
+####################################################################################################
 
 GlobalPage().exec(args)
 
+####################################################################################################

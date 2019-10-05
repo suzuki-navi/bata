@@ -65,13 +65,16 @@ class Page:
             if a == "--meta":
                 page = page.meta()
                 if page == None:
-                    sys.stderr.write("meta page not found")
+                    sys.stderr.write("Meta page not found")
                     sys.exit(1)
             elif a.startswith("-"):
                 sys.stderr.write("Unknown option: {}".format(args[-1]))
                 sys.exit(1)
             else:
                 page = page.dig(a)
+                if page == None:
+                    sys.stderr.write("Page not found: {}".format(a))
+                    sys.exit(1)
             args = args[1:]
         return page
 
@@ -111,7 +114,7 @@ class ItemsPage(Page):
         return []
 
     def detailPage(self, item):
-        return
+        return None
 
     def dig(self, arg):
         items = self.items()
@@ -146,15 +149,75 @@ class ObjectPage(Page):
 class GlobalPage(MenuPage):
     def items(self):
         return [
-            ("s3", S3Page),
+            ("glue", GluePage),
             ("lambda", LambdaPage),
+            ("s3", S3Page),
         ]
+
+####################################################################################################
+
+class GluePage(MenuPage):
+    def items(self):
+        return [
+            ("databases", GlueDatabasesPage),
+        ]
+
+class GlueDatabasesPage(ItemsPage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("glue", region_name = region)
+        ls = client.get_databases()
+        items = []
+        for elem in ls["DatabaseList"]:
+            items.append([elem["Name"]])
+        return items
+
+    def detailPage(self, item):
+        return GlueDatabasePage(item[0])
+
+class GlueDatabasePage(ItemsPage):
+    def __init__(self, database_name):
+        self.database_name = database_name
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("glue", region_name = region)
+        ls = client.get_tables(
+            DatabaseName = self.database_name,
+        )
+        items = []
+        for elem in ls["TableList"]:
+            items.append([elem["Name"]])
+        return items
+
+    def detailPage(self, item):
+        return GlueTablePage(self.database_name, item[0])
+
+class GlueTablePage(ObjectPage):
+    def __init__(self, database_name, table_name):
+        self.database_name = database_name
+        self.table_name = table_name
+
+    def object(self):
+        client = session.client("glue", region_name = region)
+        meta = client.get_table(
+            DatabaseName = self.database_name,
+            Name = self.table_name,
+        )
+        #del(meta["ResponseMetadata"])
+        return meta["Table"]
 
 ####################################################################################################
 
 class LambdaPage(MenuPage):
     def items(self):
-        return [("functions", LambdaFunctionsPage)]
+        return [
+            ("functions", LambdaFunctionsPage),
+        ]
 
 class LambdaFunctionsPage(ItemsPage):
     def nameColIdx(self):
@@ -178,12 +241,25 @@ class LambdaFunctionPage(MenuPage):
 
     def items(self):
         return [
+            ("code", LambdaFunctionCodePage),
             ("configuration", LambdaFunctionConfigurationPage),
             ("aliases", LambdaFunctionAliasesPage),
         ]
 
     def detailPage(self, item):
         return item[1](self.function_name)
+
+class LambdaFunctionCodePage(ObjectPage):
+    def __init__(self, function_name):
+        self.function_name = function_name
+
+    def object(self):
+        client = session.client("lambda", region_name = region)
+        meta = client.get_function(
+            FunctionName = self.function_name,
+        )
+        #del(meta["ResponseMetadata"])
+        return meta["Code"]
 
 class LambdaFunctionConfigurationPage(ObjectPage):
     def __init__(self, function_name):
@@ -194,20 +270,20 @@ class LambdaFunctionConfigurationPage(ObjectPage):
         meta = client.get_function(
             FunctionName = self.function_name,
         )
-        del(meta["ResponseMetadata"])
-        return meta
+        #del(meta["ResponseMetadata"])
+        return meta["Configuration"]
 
 class LambdaFunctionAliasesPage(ObjectPage):
     def __init__(self, function_name):
         self.function_name = function_name
 
-    def object(self):
-        client = session.client("lambda", region_name = region)
-        meta = client.list_aliases(
-            FunctionName = self.function_name,
-        )
-        del(meta["ResponseMetadata"])
-        return meta
+    #def object(self):
+    #    client = session.client("lambda", region_name = region)
+    #    meta = client.list_aliases(
+    #        FunctionName = self.function_name,
+    #    )
+    #    del(meta["ResponseMetadata"])
+    #    return meta
 
 ####################################################################################################
 

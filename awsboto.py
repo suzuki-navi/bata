@@ -1,6 +1,7 @@
 
 import sys
 import json
+import re
 import boto3
 import botocore
 from datetime import datetime
@@ -33,19 +34,32 @@ class Page:
     def meta(self):
         return None
 
+    def page_put(self, arg):
+        return None
+
     def view(self):
         pass
+
+    def put(self, input_object):
+        sys.stderr.write("Put operation not supported")
+        sys.exit(1)
 
     def help(self):
         pass
 
     def exec(self, args):
         if (len(args) == 0):
-            self.digs(args).view()
+            page = self.digs(args)
+            page.view()
         elif args[-1] == "--help":
             self.help()
         elif args[-1] == "--meta":
-            self.digs(args).view()
+            page = self.digs(args)
+            page.view()
+        elif args[-1] == "--put":
+            page = self.digs(args)
+            page.put(None)
+            page.view()
         #elif args[-1] == "--create":
         #    self.digs(args[0:-1]).create()
         #elif args[-1] == "--update":
@@ -70,6 +84,12 @@ class Page:
             elif a.startswith("-"):
                 sys.stderr.write("Unknown option: {}".format(args[-1]))
                 sys.exit(1)
+            elif len(args) == 2 and args[1] == "--put":
+                page = page.page_put(a)
+                if page == None:
+                    sys.stderr.write("Cannot put")
+                    sys.exit(1)
+                args = args[1:]
             else:
                 page = page.dig(a)
                 if page == None:
@@ -108,6 +128,14 @@ class TablePage(Page):
     def meta(self):
         return super().meta()
 
+    # --put オプションをサポートの場合に実装するメソッド
+    def page_put(self, arg):
+        return super().page_put(arg)
+
+    # --put オプションをサポートの場合に実装するメソッド
+    def put(self, input_object):
+        super().put(input_object)
+
     def nameColIdx(self):
         return 0
 
@@ -119,6 +147,11 @@ class TablePage(Page):
 
     def dig(self, arg):
         items = self.items()
+        result = re.match("\\A@([1-9][0-9]*)\\Z", arg)
+        if result:
+            idx = int(result.group(1))
+            if idx <= len(items):
+                return self.detailPage(items[idx + 1])
         nameColIdx = self.nameColIdx()
         for item in items:
             if item[nameColIdx] == arg:
@@ -166,10 +199,49 @@ class GlobalPage(MenuPage):
 class CloudWatchPage(MenuPage):
     def items(self):
         return [
+            ("events", CloudWatchEventsPage),
             ("logs", CloudWatchLogsPage),
         ]
 
+class CloudWatchEventsPage(MenuPage):
+    def items(self):
+        return [
+            ("rules", CloudWatchEventsRulesPage),
+        ]
+
+class CloudWatchEventsRulesPage(TablePage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("events", region_name = region)
+        ls = client.list_rules(
+        )
+        items = []
+        for elem in ls["Rules"]:
+            items.append([elem["Name"], elem["Arn"]])
+        return items
+
+    def detailPage(self, item):
+        return CloudWatchEventsRulePage(item[0], item[1])
+
+class CloudWatchEventsRulePage(ObjectPage):
+    def __init__(self, event_name, event_arn):
+        self.event_name = event_name
+        self.event_arn = event_arn
+
+    def object(self):
+        client = session.client("events", region_name = region)
+        meta = client.describe_rule(
+            Name = self.event_name,
+        )
+        del(meta["ResponseMetadata"])
+        return meta
+
 class CloudWatchLogsPage(TablePage):
+    def page_put(self, arg):
+        return CloudWatchLogGroupPage(arg)
+
     def nameColIdx(self):
         return 0
 
@@ -183,11 +255,20 @@ class CloudWatchLogsPage(TablePage):
         return items
 
     def detailPage(self, item):
-        return CloudWatchLogStreamsPage(item[0])
+        return CloudWatchLogGroupPage(item[0])
 
-class CloudWatchLogStreamsPage(TablePage):
+class CloudWatchLogGroupPage(TablePage):
     def __init__(self, log_group_name):
         self.log_group_name = log_group_name
+
+    def put(self, input_object):
+        client = session.client("logs", region_name = region)
+        try:
+            client.create_log_group(
+                logGroupName = self.log_group_name,
+               )
+        except client.exceptions.ResourceAlreadyExistsException as e:
+            pass
 
     def items(self):
         client = session.client("logs", region_name = region)
@@ -311,6 +392,9 @@ class GlueDatabasePage(TablePage):
     def __init__(self, database_name):
         self.database_name = database_name
 
+    def meta(self):
+        return GlueDatabaseMetaPage(self.database_name)
+
     def nameColIdx(self):
         return 0
 
@@ -326,6 +410,17 @@ class GlueDatabasePage(TablePage):
 
     def detailPage(self, item):
         return GlueTablePage(self.database_name, item[0])
+
+class GlueDatabaseMetaPage(ObjectPage):
+    def __init__(self, database_name):
+        self.database_name = database_name
+
+    def object(self):
+        client = session.client("glue", region_name = region)
+        info = client.get_database(
+            Name = self.database_name,
+        )
+        return info["Database"]
 
 class GlueTablePage(ObjectPage):
     def __init__(self, database_name, table_name):

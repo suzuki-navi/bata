@@ -5,9 +5,13 @@
 ## 対応しているメニュー
 
     cloudwatch                                                                  -> Menu
+    cloudwatch events                                                           -> Menu
+    cloudwatch events rules                                                     -> Table
+    cloudwatch events rules <RULE_NAME>                                         -> Object
     cloudwatch logs                                                             -> Table
     cloudwatch logs <LOG_GROUP_NAME>                                            -> Table
     cloudwatch logs <LOG_GROUP_NAME> <LOG_STREAM_NAME>                          -> Table
+    cloudwatch logs <LOG_GROUP_NAME> --put                                      -> Table <- None
     ecr                                                                         -> Menu
     ecr repositories                                                            -> Table
     ecr repositories <REPOSITORY_NAME>                                          -> Table
@@ -15,6 +19,7 @@
     glue                                                                        -> Menu
     glue databases                                                              -> Table
     glue databases <DATABASE_NAME>                                              -> Table
+    glue databases <DATABASE_NAME> --meta                                       -> Object
     glue databases <DATABASE_NAME> <TABLE_NAME>                                 -> Object
     iam                                                                         -> Menu
     iam users                                                                   -> Table

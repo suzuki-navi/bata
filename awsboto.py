@@ -78,8 +78,9 @@ class Page:
             args = args[1:]
         return page
 
-class NonePage(Page):
-    pass
+class NotImplementedPage(Page):
+    def view(self):
+        print("Not implemented page")
 
 ####################################################################################################
 
@@ -448,6 +449,9 @@ class IAMPoliciesPage(TablePage):
     def items(self):
         client = session.client("iam")
         ls = client.list_policies(
+            Scope = "All",
+            OnlyAttached = False,
+            MaxItems = 1000,
         )
         items = []
         for elem in ls["Policies"]:
@@ -727,7 +731,7 @@ class S3DirPage(TablePage):
         if item[1] == "":
             return S3DirPage(self.bucket_name, path)
         else:
-            return NonePage()
+            return NotImplementedPage()
 
 ####################################################################################################
 

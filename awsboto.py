@@ -103,7 +103,7 @@ class MenuPage(Page):
         for item in items:
             print(item[0])
 
-class ItemsPage(Page):
+class TablePage(Page):
     def meta(self):
         return super().meta()
 
@@ -126,6 +126,9 @@ class ItemsPage(Page):
         sys.exit(1)
 
     def view(self):
+        if sys.stdout.isatty():
+            if self.meta() != None:
+                print("# --meta exists.")
         items = self.items()
         for item in items:
             print(item)
@@ -152,6 +155,7 @@ class GlobalPage(MenuPage):
             ("cloudwatch", CloudWatchPage),
             ("ecr", ECRPage),
             ("glue", GluePage),
+            ("iam", IAMPage),
             ("lambda", LambdaPage),
             ("s3", S3Page),
         ]
@@ -164,7 +168,7 @@ class CloudWatchPage(MenuPage):
             ("logs", CloudWatchLogsPage),
         ]
 
-class CloudWatchLogsPage(ItemsPage):
+class CloudWatchLogsPage(TablePage):
     def nameColIdx(self):
         return 0
 
@@ -180,7 +184,7 @@ class CloudWatchLogsPage(ItemsPage):
     def detailPage(self, item):
         return CloudWatchLogStreamsPage(item[0])
 
-class CloudWatchLogStreamsPage(ItemsPage):
+class CloudWatchLogStreamsPage(TablePage):
     def __init__(self, log_group_name):
         self.log_group_name = log_group_name
 
@@ -199,7 +203,7 @@ class CloudWatchLogStreamsPage(ItemsPage):
     def detailPage(self, item):
         return CloudWatchLogStreamEventsPage(self.log_group_name, item[0])
 
-class CloudWatchLogStreamEventsPage(ItemsPage):
+class CloudWatchLogStreamEventsPage(TablePage):
     def __init__(self, log_group_name, log_stream_name):
         self.log_group_name = log_group_name
         self.log_stream_name = log_stream_name
@@ -227,7 +231,7 @@ class ECRPage(MenuPage):
             ("repositories", ECRRepositoriesPage),
         ]
 
-class ECRRepositoriesPage(ItemsPage):
+class ECRRepositoriesPage(TablePage):
     def nameColIdx(self):
         return 0
 
@@ -245,7 +249,7 @@ class ECRRepositoriesPage(ItemsPage):
     def detailPage(self, item):
         return ECRRepositoryImagesPage(item[0])
 
-class ECRRepositoryImagesPage(ItemsPage):
+class ECRRepositoryImagesPage(TablePage):
     def __init__(self, repository_name):
         self.repository_name = repository_name
 
@@ -287,7 +291,7 @@ class GluePage(MenuPage):
             ("databases", GlueDatabasesPage),
         ]
 
-class GlueDatabasesPage(ItemsPage):
+class GlueDatabasesPage(TablePage):
     def nameColIdx(self):
         return 0
 
@@ -302,7 +306,7 @@ class GlueDatabasesPage(ItemsPage):
     def detailPage(self, item):
         return GlueDatabasePage(item[0])
 
-class GlueDatabasePage(ItemsPage):
+class GlueDatabasePage(TablePage):
     def __init__(self, database_name):
         self.database_name = database_name
 
@@ -338,13 +342,211 @@ class GlueTablePage(ObjectPage):
 
 ####################################################################################################
 
+class IAMPage(MenuPage):
+    def items(self):
+        return [
+            ("users", IAMUsersPage),
+            ("roles", IAMRolesPage),
+            ("policies", IAMPoliciesPage),
+        ]
+
+class IAMUsersPage(TablePage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("iam")
+        ls = client.list_users(
+        )
+        items = []
+        for elem in ls["Users"]:
+            items.append([elem["UserName"]])
+        return items
+
+    def detailPage(self, item):
+        return IAMUserPage(item[0])
+
+class IAMUserPage(ObjectPage):
+    def __init__(self, user_name):
+        self.user_name = user_name
+
+    def object(self):
+        client = session.client("iam")
+        meta = client.get_user(
+            UserName = self.user_name,
+        )
+        return meta["User"]
+
+class IAMRolesPage(TablePage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("iam")
+        ls = client.list_roles(
+        )
+        items = []
+        for elem in ls["Roles"]:
+            items.append([elem["RoleName"]])
+        return items
+
+    def detailPage(self, item):
+        return IAMRolePage(item[0])
+
+class IAMRolePage(TablePage):
+    def __init__(self, role_name):
+        self.role_name = role_name
+
+    def meta(self):
+        return IAMRoleMetaPage(self.role_name)
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("iam")
+        items = []
+        ls = client.list_role_policies(
+            RoleName = self.role_name,
+        )
+        for elem in ls["PolicyNames"]:
+            items.append([elem, "inline"])
+        ls = client.list_attached_role_policies(
+            RoleName = self.role_name,
+        )
+        for elem in ls["AttachedPolicies"]:
+            items.append([elem["PolicyName"], "attached"])
+        return items
+
+class IAMRoleMetaPage(MenuPage):
+    def __init__(self, role_name):
+        self.role_name = role_name
+
+    def items(self):
+        return [
+            ("info", IAMRoleInfoPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.role_name)
+
+class IAMRoleInfoPage(ObjectPage):
+    def __init__(self, role_name):
+        self.role_name = role_name
+
+    def object(self):
+        client = session.client("iam")
+        meta = client.get_role(
+            RoleName = self.role_name,
+        )
+        return meta["Role"]
+
+class IAMPoliciesPage(TablePage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("iam")
+        ls = client.list_policies(
+        )
+        items = []
+        for elem in ls["Policies"]:
+            items.append([elem["PolicyName"], elem["Arn"]])
+        return items
+
+    def detailPage(self, item):
+        return IAMPolicyPage(item[0], item[1])
+
+class IAMPolicyPage(ObjectPage):
+    def __init__(self, policy_name, policy_arn):
+        self.policy_name = policy_name
+        self.policy_arn = policy_arn
+
+    def meta(self):
+        return IAMPolicyMetaPage(self.policy_name, self.policy_arn)
+
+    def object(self):
+        client = session.client("iam")
+        policy_meta = client.get_policy(
+            PolicyArn = self.policy_arn,
+        )
+        version_id = policy_meta["Policy"]["DefaultVersionId"]
+        version_meta = client.get_policy_version(
+            PolicyArn = self.policy_arn,
+            VersionId = version_id,
+        )
+        return version_meta["PolicyVersion"]["Document"]
+
+class IAMPolicyMetaPage(MenuPage):
+    def __init__(self, policy_name, policy_arn):
+        self.policy_name = policy_name
+        self.policy_arn = policy_arn
+
+    def items(self):
+        return [
+            ("info", IAMPolicyInfoPage),
+            ("versions", IAMPolicyVersionsPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.policy_name, self.policy_arn)
+
+class IAMPolicyInfoPage(ObjectPage):
+    def __init__(self, policy_name, policy_arn):
+        self.policy_name = policy_name
+        self.policy_arn = policy_arn
+
+    def object(self):
+        client = session.client("iam")
+        meta = client.get_policy(
+            PolicyArn = self.policy_arn,
+        )
+        return meta["Policy"]
+
+class IAMPolicyVersionsPage(TablePage):
+    def __init__(self, policy_name, policy_arn):
+        self.policy_name = policy_name
+        self.policy_arn = policy_arn
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("iam")
+        ls = client.list_policy_versions(
+            PolicyArn = self.policy_arn,
+        )
+        items = []
+        for elem in ls["Versions"]:
+            items.append([elem["VersionId"], elem["IsDefaultVersion"]])
+        return items
+
+    def detailPage(self, item):
+        return IAMPolicyVersionPage(self.policy_name, self.policy_arn, item[0])
+
+class IAMPolicyVersionPage(ObjectPage):
+    def __init__(self, policy_name, policy_arn, policy_version_id):
+        self.policy_name = policy_name
+        self.policy_arn = policy_arn
+        self.policy_version_id = policy_version_id
+
+    def object(self):
+        client = session.client("iam")
+        meta = client.get_policy_version(
+            PolicyArn = self.policy_arn,
+            VersionId = self.policy_version_id,
+        )
+        return meta["PolicyVersion"]
+
+####################################################################################################
+
 class LambdaPage(MenuPage):
     def items(self):
         return [
             ("functions", LambdaFunctionsPage),
         ]
 
-class LambdaFunctionsPage(ItemsPage):
+class LambdaFunctionsPage(TablePage):
     def nameColIdx(self):
         return 0
 
@@ -416,7 +618,7 @@ class S3Page(MenuPage):
     def items(self):
         return [("buckets", S3BucketsPage)]
 
-class S3BucketsPage(ItemsPage):
+class S3BucketsPage(TablePage):
     def nameColIdx(self):
         return 0
 
@@ -475,7 +677,7 @@ class S3BucketMetaPolicyPage(ObjectPage):
                 raise e
         return meta2
 
-class S3DirPage(ItemsPage):
+class S3DirPage(TablePage):
     def __init__(self, bucket_name, path):
         self.bucket_name = bucket_name
         self.path = path
@@ -523,9 +725,9 @@ class S3DirPage(ItemsPage):
             prefix = self.path + "/"
         path = prefix + item[0]
         if item[1] == "":
-            return NonePage()
-        else:
             return S3DirPage(self.bucket_name, path)
+        else:
+            return NonePage()
 
 ####################################################################################################
 

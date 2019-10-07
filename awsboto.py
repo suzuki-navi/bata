@@ -37,6 +37,9 @@ class Page:
     def page_put(self, arg):
         return None
 
+    def canonical(self):
+        return None
+
     def view(self):
         pass
 
@@ -49,30 +52,37 @@ class Page:
 
     def exec(self, args):
         if (len(args) == 0):
-            page = self.digs(args)
-            page.view()
+            page = self._digs(args)
+            page._view()
         elif args[-1] == "--help":
             self.help()
         elif args[-1] == "--meta":
-            page = self.digs(args)
-            page.view()
+            page = self._digs(args)
+            page._view()
         elif args[-1] == "--put":
-            page = self.digs(args)
+            page = self._digs(args)
             page.put(None)
-            page.view()
+            page._view()
         #elif args[-1] == "--create":
-        #    self.digs(args[0:-1]).create()
+        #    self._digs(args[0:-1]).create()
         #elif args[-1] == "--update":
-        #    self.digs(args[0:-1]).update()
+        #    self._digs(args[0:-1]).update()
         #elif args[-1] == "--delete":
-        #    self.digs(args[0:-1]).delete()
+        #    self._digs(args[0:-1]).delete()
         elif args[-1].startswith("-"):
             sys.stderr.write("Unknown option: {}".format(args[-1]))
             sys.exit(1)
         else:
-            self.digs(args).view()
+            self._digs(args)._view()
 
-    def digs(self, args):
+    def _view(self):
+        canonical = self.canonical()
+        if sys.stdout.isatty():
+            if canonical != None:
+                print("# " + (" ".join(canonical)))
+        self.view()
+
+    def _digs(self, args):
         page = self
         while len(args) > 0:
             a = args[0]
@@ -105,6 +115,9 @@ class NotImplementedPage(Page):
 ####################################################################################################
 
 class MenuPage(Page):
+    def canonical(self):
+        return None
+
     def items(self):
         return []
 
@@ -125,6 +138,9 @@ class MenuPage(Page):
             print(item[0])
 
 class TablePage(Page):
+    def canonical(self):
+        return None
+
     def meta(self):
         return super().meta()
 
@@ -151,7 +167,7 @@ class TablePage(Page):
         if result:
             idx = int(result.group(1))
             if idx <= len(items):
-                return self.detailPage(items[idx + 1])
+                return self.detailPage(items[idx - 1])
         nameColIdx = self.nameColIdx()
         for item in items:
             if item[nameColIdx] == arg:
@@ -168,6 +184,9 @@ class TablePage(Page):
             print(item)
 
 class ObjectPage(Page):
+    def canonical(self):
+        return None
+
     def meta(self):
         return super().meta()
 
@@ -181,6 +200,31 @@ class ObjectPage(Page):
         meta = self.object()
         print_dump(meta)
 
+    def dig(self, arg):
+        elem = self.object()
+        if arg in elem:
+            return ObjectElementPage(elem[arg])
+        else:
+            return None
+
+class ObjectElementPage(Page):
+    def __init__(self, elem):
+        self.elem = elem
+
+    def view(self):
+        elem = self.elem
+        if isinstance(elem, str):
+            print(elem)
+        else:
+            print_dump(elem)
+
+    def dig(self, arg):
+        elem = self.elem
+        if arg in elem:
+            return ObjectElementPage(elem[arg])
+        else:
+            return None
+
 ####################################################################################################
 
 class GlobalPage(MenuPage):
@@ -191,6 +235,7 @@ class GlobalPage(MenuPage):
             ("glue", GluePage),
             ("iam", IAMPage),
             ("lambda", LambdaPage),
+            ("rds", RDSPage),
             ("s3", S3Page),
         ]
 
@@ -304,6 +349,11 @@ class CloudWatchLogStreamEventsPage(TablePage):
     #def detailPage(self, item):
     #    return CloudWatchLogStreamsPage(item[0])
 
+#class CloundWatchLogTextPage(Page):
+#    def __init__(self, log_group_name, log_stream_name):
+#        self.log_group_name = log_group_name
+#        self.log_stream_name = log_stream_name
+
 
 ####################################################################################################
 
@@ -371,6 +421,8 @@ class GluePage(MenuPage):
     def items(self):
         return [
             ("databases", GlueDatabasesPage),
+            ("crawlers", GlueCrawlersPage),
+            ("jobs", GlueJobsPage),
         ]
 
 class GlueDatabasesPage(TablePage):
@@ -435,6 +487,125 @@ class GlueTablePage(ObjectPage):
         )
         #del(meta["ResponseMetadata"])
         return meta["Table"]
+
+class GlueCrawlersPage(TablePage):
+    def canonical(self):
+        return ["glue", "crawlers"]
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("glue", region_name = region)
+        ls = client.list_crawlers()
+        items = []
+        for elem in ls["CrawlerNames"]:
+            items.append([elem])
+        return items
+
+    def detailPage(self, item):
+        return GlueCrawlerPage(item[0])
+
+class GlueCrawlerPage(ObjectPage):
+    def __init__(self, crawler_name):
+        self.crawler_name = crawler_name
+
+    def canonical(self):
+        return ["glue", "crawlers", self.crawler_name]
+
+    def object(self):
+        client = session.client("glue", region_name = region)
+        meta = client.get_crawler(
+            Name = self.crawler_name,
+        )
+        return meta["Crawler"]
+
+class GlueJobsPage(TablePage):
+    def canonical(self):
+        return ["glue", "jobs"]
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("glue", region_name = region)
+        ls = client.get_jobs()
+        items = []
+        for elem in ls["Jobs"]:
+            items.append([elem["Name"]])
+        return items
+
+    def detailPage(self, item):
+        return GlueJobPage(item[0])
+
+class GlueJobPage(MenuPage):
+    def __init__(self, job_name):
+        self.job_name = job_name
+
+    def canonical(self):
+        return ["glue", "jobs", self.job_name]
+
+    def items(self):
+        return [
+            ("info", GlueJobInfoPage),
+            ("history", GlueJobHistoryPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.job_name)
+
+class GlueJobInfoPage(ObjectPage):
+    def __init__(self, job_name):
+        self.job_name = job_name
+
+    def canonical(self):
+        return ["glue", "jobs", self.job_name, "info"]
+
+    def object(self):
+        client = session.client("glue", region_name = region)
+        meta = client.get_job(
+            JobName = self.job_name,
+        )
+        return meta["Job"]
+
+class GlueJobHistoryPage(TablePage):
+    def __init__(self, job_name):
+        self.job_name = job_name
+
+    def canonical(self):
+        return ["glue", "jobs", self.job_name, "history"]
+
+    def items(self):
+        client = session.client("glue", region_name = region)
+        ls = client.get_job_runs(
+            JobName = self.job_name,
+        )
+        items = []
+        for elem in ls["JobRuns"]:
+            err = ""
+            if "ErrorMessage" in elem:
+                err = elem["ErrorMessage"]
+            items.append([elem["Id"], elem["StartedOn"], elem["JobRunState"], elem["ExecutionTime"], err])
+        return items
+
+    def detailPage(self, item):
+        return GlueJobRunPage(self.job_name, item[0])
+
+class GlueJobRunPage(ObjectPage):
+    def __init__(self, job_name, run_id):
+        self.job_name = job_name
+        self.run_id = run_id
+
+    def canonical(self):
+        return ["glue", "jobs", self.job_name, "history", self.run_id]
+
+    def object(self):
+        client = session.client("glue", region_name = region)
+        meta = client.get_job_run(
+            JobName = self.job_name,
+            RunId = self.run_id,
+        )
+        return meta["JobRun"]
 
 ####################################################################################################
 
@@ -710,6 +881,57 @@ class LambdaFunctionAliasesPage(ObjectPage):
     #    )
     #    del(meta["ResponseMetadata"])
     #    return meta
+
+####################################################################################################
+
+class RDSPage(MenuPage):
+    def items(self):
+        return [("databases", RDSDatabasesPage)]
+
+class RDSDatabasesPage(TablePage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("rds", region_name = region)
+        ls = client.describe_db_instances()
+        items = []
+        for elem in ls["DBInstances"]:
+            items.append([elem["DBInstanceIdentifier"]])
+        return items
+
+    def detailPage(self, item):
+        return RDSDatabasePage(item[0])
+
+class RDSDatabasePage(TablePage):
+    def __init__(self, database_instance_identifier):
+        self.database_instance_identifier = database_instance_identifier
+
+    def meta(self):
+        return RDSDatabaseMetaPage(self.database_instance_identifier)
+
+class RDSDatabaseMetaPage(MenuPage):
+    def __init__(self, database_instance_identifier):
+        self.database_instance_identifier = database_instance_identifier
+
+    def items(self):
+        return [
+            ("info", RDSDatabaseMetaInfoPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.database_instance_identifier)
+
+class RDSDatabaseMetaInfoPage(ObjectPage):
+    def __init__(self, database_instance_identifier):
+        self.database_instance_identifier = database_instance_identifier
+
+    def object(self):
+        client = session.client("rds", region_name = region)
+        ls = client.describe_db_instances(
+            DBInstanceIdentifier = self.database_instance_identifier,
+        )
+        return ls["DBInstances"][0]
 
 ####################################################################################################
 

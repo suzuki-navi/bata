@@ -31,10 +31,7 @@ class Page:
         sys.stderr.write("Unknown object: {}".format(arg))
         sys.exit(1)
 
-    def meta(self):
-        return None
-
-    def page_put(self, arg):
+    def alt(self):
         return None
 
     def canonical(self):
@@ -42,10 +39,6 @@ class Page:
 
     def view(self):
         pass
-
-    def put(self, input_object):
-        sys.stderr.write("Put operation not supported")
-        sys.exit(1)
 
     def help(self):
         pass
@@ -56,19 +49,9 @@ class Page:
             page._view()
         elif args[-1] == "--help":
             self.help()
-        elif args[-1] == "--meta":
+        elif args[-1] == "--alt":
             page = self._digs(args)
             page._view()
-        elif args[-1] == "--put":
-            page = self._digs(args)
-            page.put(None)
-            page._view()
-        #elif args[-1] == "--create":
-        #    self._digs(args[0:-1]).create()
-        #elif args[-1] == "--update":
-        #    self._digs(args[0:-1]).update()
-        #elif args[-1] == "--delete":
-        #    self._digs(args[0:-1]).delete()
         elif args[-1].startswith("-"):
             sys.stderr.write("Unknown option: {}".format(args[-1]))
             sys.exit(1)
@@ -79,27 +62,28 @@ class Page:
         canonical = self.canonical()
         if sys.stdout.isatty():
             if canonical != None:
-                print("# " + (" ".join(canonical)))
+                print("# canonical: " + (" ".join(canonical)))
+            alt_page = self.alt()
+            if alt_page != None:
+                if isinstance(alt_page, MenuPage):
+                    for item in alt_page.items():
+                        print("# see-also: ... --alt {}".format(item[0]))
+                else:
+                    print("# see-also: ... --alt")
         self.view()
 
     def _digs(self, args):
         page = self
         while len(args) > 0:
             a = args[0]
-            if a == "--meta":
-                page = page.meta()
+            if a == "--alt":
+                page = page.alt()
                 if page == None:
                     sys.stderr.write("Meta page not found")
                     sys.exit(1)
             elif a.startswith("-"):
                 sys.stderr.write("Unknown option: {}".format(args[-1]))
                 sys.exit(1)
-            elif len(args) == 2 and args[1] == "--put":
-                page = page.page_put(a)
-                if page == None:
-                    sys.stderr.write("Cannot put")
-                    sys.exit(1)
-                args = args[1:]
             else:
                 page = page.dig(a)
                 if page == None:
@@ -141,16 +125,8 @@ class TablePage(Page):
     def canonical(self):
         return None
 
-    def meta(self):
-        return super().meta()
-
-    # --put オプションをサポートの場合に実装するメソッド
-    def page_put(self, arg):
-        return super().page_put(arg)
-
-    # --put オプションをサポートの場合に実装するメソッド
-    def put(self, input_object):
-        super().put(input_object)
+    def alt(self):
+        return super().alt()
 
     def nameColIdx(self):
         return 0
@@ -176,9 +152,6 @@ class TablePage(Page):
         sys.exit(1)
 
     def view(self):
-        if sys.stdout.isatty():
-            if self.meta() != None:
-                print("# --meta exists.")
         items = self.items()
         for item in items:
             print(item)
@@ -187,16 +160,13 @@ class ObjectPage(Page):
     def canonical(self):
         return None
 
-    def meta(self):
-        return super().meta()
+    def alt(self):
+        return super().alt()
 
     def object(self):
         return None
 
     def view(self):
-        if sys.stdout.isatty():
-            if self.meta() != None:
-                print("# --meta exists.")
         meta = self.object()
         print_dump(meta)
 
@@ -284,9 +254,6 @@ class CloudWatchEventsRulePage(ObjectPage):
         return meta
 
 class CloudWatchLogsPage(TablePage):
-    def page_put(self, arg):
-        return CloudWatchLogGroupPage(arg)
-
     def nameColIdx(self):
         return 0
 
@@ -305,15 +272,6 @@ class CloudWatchLogsPage(TablePage):
 class CloudWatchLogGroupPage(TablePage):
     def __init__(self, log_group_name):
         self.log_group_name = log_group_name
-
-    def put(self, input_object):
-        client = session.client("logs", region_name = region)
-        try:
-            client.create_log_group(
-                logGroupName = self.log_group_name,
-               )
-        except client.exceptions.ResourceAlreadyExistsException as e:
-            pass
 
     def items(self):
         client = session.client("logs", region_name = region)
@@ -444,7 +402,7 @@ class GlueDatabasePage(TablePage):
     def __init__(self, database_name):
         self.database_name = database_name
 
-    def meta(self):
+    def alt(self):
         return GlueDatabaseMetaPage(self.database_name)
 
     def nameColIdx(self):
@@ -664,7 +622,7 @@ class IAMRolePage(TablePage):
     def __init__(self, role_name):
         self.role_name = role_name
 
-    def meta(self):
+    def alt(self):
         return IAMRoleMetaPage(self.role_name)
 
     def nameColIdx(self):
@@ -732,7 +690,7 @@ class IAMPolicyPage(ObjectPage):
         self.policy_name = policy_name
         self.policy_arn = policy_arn
 
-    def meta(self):
+    def alt(self):
         return IAMPolicyMetaPage(self.policy_name, self.policy_arn)
 
     def object(self):
@@ -907,7 +865,7 @@ class RDSDatabasePage(TablePage):
     def __init__(self, database_instance_identifier):
         self.database_instance_identifier = database_instance_identifier
 
-    def meta(self):
+    def alt(self):
         return RDSDatabaseMetaPage(self.database_instance_identifier)
 
 class RDSDatabaseMetaPage(MenuPage):
@@ -1003,11 +961,11 @@ class S3DirPage(TablePage):
         self.bucket_name = bucket_name
         self.path = path
 
-    def meta(self):
+    def alt(self):
         if self.path == "":
             return S3BucketMetaPage(self.bucket_name)
         else:
-            return super().meta()
+            return super().alt()
 
     def nameColIdx(self):
         return 0

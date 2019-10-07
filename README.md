@@ -1,6 +1,15 @@
-# awsboto
+# bata
 
 自作aws cliツール
+
+## 利用方法
+
+dockerがインストールされていれば
+
+    $ ./bin/bata PARAMETERS ...
+
+dockerなしの環境で動かすには Dockerfile 参照。
+
 
 ## 対応しているメニュー
 

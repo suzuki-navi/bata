@@ -1,0 +1,13 @@
+#!/bin/bash
+
+dir=$(cd $(dirname $0); cd ..; pwd)
+
+if [ $(docker images -q bata | wc -l) = 0 ]; then
+    (
+        cd $dir
+        docker build -t bata .
+    )
+fi
+
+docker run -it --rm -v $dir:/usr/source -v $HOME/.aws:/root/.aws bata python3 /usr/source/src/main.py "$@"
+

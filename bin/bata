@@ -11,5 +11,9 @@ if [ $(docker images -q bata | wc -l) = 0 ]; then
     )
 fi
 
-docker run -it --rm -v $dir:/usr/source -v $HOME/.aws:/root/.aws bata python3 /usr/source/src/main.py "$@"
+if [ -t 1 ]; then
+    docker run -it --rm -v $dir:/usr/source -v $HOME/.aws:/root/.aws bata python3 /usr/source/src/main.py "$@"
+else
+    docker run --rm -v $dir:/usr/source -v $HOME/.aws:/root/.aws bata python3 /usr/source/src/main.py "$@"
+fi
 

@@ -14,6 +14,8 @@ if len(args) > 1 and args[0] == "--profile":
     session = boto3.session.Session(profile_name = args[1])
     args = args[2:]
 
+####################################################################################################
+
 def json_dump(obj):
     def support_othertype_default(o):
         if isinstance(o, datetime):
@@ -23,6 +25,42 @@ def json_dump(obj):
 
 def print_dump(obj):
     print(json_dump(obj))
+
+def table_col_to_str(o):
+    if isinstance(o, datetime):
+        return o.isoformat()
+    else:
+        return str(o)
+
+def print_table(records):
+    record_count = len(records)
+    if record_count == 0:
+        return
+    head_count = record_count
+    if head_count > 100:
+        head_count = 100
+    col_count = len(records[0])
+    col_width_list = []
+    for j in range(col_count):
+        col_width_list.append(0)
+    for i in range(head_count):
+        record = records[i]
+        for j in range(col_count):
+            s = table_col_to_str(record[j])
+            if col_width_list[j] < len(s):
+                col_width_list[j] = len(s)
+    for record in records:
+        pad1 = ""
+        for j in range(col_count):
+            elem = record[j]
+            s = table_col_to_str(elem)
+            pad = col_width_list[j] - len(s)
+            if pad > 0:
+                s = s + (" " * pad)
+            s = pad1 + s
+            sys.stdout.write(s)
+            pad1 = " "
+        sys.stdout.write("\n")
 
 ####################################################################################################
 
@@ -153,8 +191,7 @@ class TablePage(Page):
 
     def view(self):
         items = self.items()
-        for item in items:
-            print(item)
+        print_table(items)
 
 class ObjectPage(Page):
     def canonical(self):
@@ -173,13 +210,20 @@ class ObjectPage(Page):
     def dig(self, arg):
         elem = self.object()
         if arg in elem:
-            return ObjectElementPage(elem[arg])
+            canonical = self.canonical()
+            if canonical != None:
+                canonical.append(arg)
+            return ObjectElementPage(elem[arg], canonical)
         else:
             return None
 
 class ObjectElementPage(Page):
-    def __init__(self, elem):
+    def __init__(self, elem, canonical):
         self.elem = elem
+        self._canonical = canonical
+
+    def canonical(self):
+        return self._canonical
 
     def view(self):
         elem = self.elem
@@ -191,7 +235,10 @@ class ObjectElementPage(Page):
     def dig(self, arg):
         elem = self.elem
         if arg in elem:
-            return ObjectElementPage(elem[arg])
+            canonical = self._canonical
+            if canonical != None:
+                canonical.append(arg)
+            return ObjectElementPage(elem[arg], canonical)
         else:
             return None
 
@@ -200,6 +247,7 @@ class ObjectElementPage(Page):
 class GlobalPage(MenuPage):
     def items(self):
         return [
+            ("code", CodePage),
             ("cloudwatch", CloudWatchPage),
             ("ecr", ECRPage),
             ("glue", GluePage),
@@ -208,6 +256,30 @@ class GlobalPage(MenuPage):
             ("rds", RDSPage),
             ("s3", S3Page),
         ]
+
+####################################################################################################
+
+class CodePage(MenuPage):
+    def items(self):
+        return [
+            ("commit", CodeCommitPage),
+        ]
+
+class CodeCommitPage(TablePage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("codecommit", region_name = region)
+        ls = client.list_repositories(
+        )
+        items = []
+        for elem in ls["repositories"]:
+            items.append([elem["repositoryName"], elem["repositoryId"]])
+        return items
+
+    #def detailPage(self, item):
+    #    return CodeCommitRepositoryPage(item[0], item[1])
 
 ####################################################################################################
 
@@ -376,9 +448,13 @@ class ECRRepositoryImagePage(ObjectPage):
 ####################################################################################################
 
 class GluePage(MenuPage):
+    def canonical(self):
+        return ["glue"]
+
     def items(self):
         return [
             ("databases", GlueDatabasesPage),
+            ("connections", GlueConnectionsPage),
             ("crawlers", GlueCrawlersPage),
             ("jobs", GlueJobsPage),
         ]
@@ -445,6 +521,38 @@ class GlueTablePage(ObjectPage):
         )
         #del(meta["ResponseMetadata"])
         return meta["Table"]
+
+class GlueConnectionsPage(TablePage):
+    def canonical(self):
+        return ["glue", "connections"]
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("glue", region_name = region)
+        ls = client.get_connections()
+        items = []
+        for elem in ls["ConnectionList"]:
+            items.append([elem["Name"]])
+        return items
+
+    def detailPage(self, item):
+        return GlueConnectionPage(item[0])
+
+class GlueConnectionPage(ObjectPage):
+    def __init__(self, connection_name):
+        self.connection_name = connection_name
+
+    def canonical(self):
+        return ["glue", "connections", self.connection_name]
+
+    def object(self):
+        client = session.client("glue", region_name = region)
+        meta = client.get_connection(
+            Name = self.connection_name,
+        )
+        return meta["Connection"]
 
 class GlueCrawlersPage(TablePage):
     def canonical(self):
@@ -843,10 +951,16 @@ class LambdaFunctionAliasesPage(ObjectPage):
 ####################################################################################################
 
 class RDSPage(MenuPage):
+    def canonical(self):
+        return ["rds"]
+
     def items(self):
         return [("databases", RDSDatabasesPage)]
 
 class RDSDatabasesPage(TablePage):
+    def canonical(self):
+        return ["rds", "databases"]
+
     def nameColIdx(self):
         return 0
 
@@ -855,7 +969,7 @@ class RDSDatabasesPage(TablePage):
         ls = client.describe_db_instances()
         items = []
         for elem in ls["DBInstances"]:
-            items.append([elem["DBInstanceIdentifier"]])
+            items.append([elem["DBInstanceIdentifier"], elem["Endpoint"]["Address"]])
         return items
 
     def detailPage(self, item):
@@ -865,24 +979,33 @@ class RDSDatabasePage(TablePage):
     def __init__(self, database_instance_identifier):
         self.database_instance_identifier = database_instance_identifier
 
-    def alt(self):
-        return RDSDatabaseMetaPage(self.database_instance_identifier)
+    def canonical(self):
+        return ["rds", "databases", self.database_instance_identifier]
 
-class RDSDatabaseMetaPage(MenuPage):
+    def alt(self):
+        return RDSDatabaseAltPage(self.database_instance_identifier)
+
+class RDSDatabaseAltPage(MenuPage):
     def __init__(self, database_instance_identifier):
         self.database_instance_identifier = database_instance_identifier
 
+    def canonical(self):
+        return ["rds", "databases", self.database_instance_identifier, "--alt"]
+
     def items(self):
         return [
-            ("info", RDSDatabaseMetaInfoPage),
+            ("info", RDSDatabaseInfoPage),
         ]
 
     def detailPage(self, item):
         return item[1](self.database_instance_identifier)
 
-class RDSDatabaseMetaInfoPage(ObjectPage):
+class RDSDatabaseInfoPage(ObjectPage):
     def __init__(self, database_instance_identifier):
         self.database_instance_identifier = database_instance_identifier
+
+    def canonical(self):
+        return ["rds", "databases", self.database_instance_identifier, "--alt", "info"]
 
     def object(self):
         client = session.client("rds", region_name = region)
@@ -982,14 +1105,16 @@ class S3DirPage(TablePage):
             Prefix = prefix,
         )
         items = []
+        len_prefix = len(prefix)
         if "CommonPrefixes" in ls:
             for elem in ls["CommonPrefixes"]:
                 name = elem["Prefix"]
                 if name.endswith("/"):
                     name = name[0:-1]
+                if name.startswith(prefix):
+                    name = name[len_prefix : ]
                 items.append([name, "", "", ""])
         if "Contents" in ls:
-            len_prefix = len(prefix)
             for elem in ls["Contents"]:
                 name = elem["Key"]
                 if name.startswith(prefix):
@@ -1006,7 +1131,22 @@ class S3DirPage(TablePage):
         if item[1] == "":
             return S3DirPage(self.bucket_name, path)
         else:
-            return NotImplementedPage()
+            return S3ObjectPage(self.bucket_name, path)
+
+class S3ObjectPage(ObjectPage):
+    def __init__(self, bucket_name, key):
+        self.bucket_name = bucket_name
+        self.key = key
+
+    def object(self):
+        client = session.client("s3")
+        info = client.get_object(
+            Bucket = self.bucket_name,
+            Key = self.key,
+        )
+        del(info["ResponseMetadata"])
+        del(info["Body"])
+        return info
 
 ####################################################################################################
 

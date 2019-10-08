@@ -13,6 +13,8 @@ dockerなしの環境で動かすには Dockerfile 参照。
 
 ## 対応しているメニュー
 
+    code                                                                        -> Menu
+    code commit                                                                 -> Table
     cloudwatch                                                                  -> Menu
     cloudwatch events                                                           -> Menu
     cloudwatch events rules                                                     -> Table
@@ -29,6 +31,8 @@ dockerなしの環境で動かすには Dockerfile 参照。
     glue databases <DATABASE_NAME>                                              -> Table
     glue databases <DATABASE_NAME> <TABLE_NAME>                                 -> Object
     glue databases <DATABASE_NAME> --alt                                        -> Object
+    glue connections                                                            -> Table
+    glue connections <CONNECTION_NAME>                                          -> Menu
     glue crawlers                                                               -> Table
     glue crawlers <CRAWLER_NAME>                                                -> Object
     glue jobs                                                                   -> Table
@@ -65,7 +69,7 @@ dockerなしの環境で動かすには Dockerfile 参照。
     s3 buckets                                                                  -> Table
     s3 buckets <BUCKET_NAME>                                                    -> Table
     s3 buckets <BUCKET_NAME> <PREFIX> ...                                       -> Table
-    s3 buckets <BUCKET_NAME> <PREFIX> ... <KEY_NAME>                            -> Not implemented
+    s3 buckets <BUCKET_NAME> <PREFIX> ... <KEY_NAME>                            -> Object
     s3 buckets <BUCKET_NAME> --alt                                              -> Menu
     s3 buckets <BUCKET_NAME> --alt versioning                                   -> Object
     s3 buckets <BUCKET_NAME> --alt policy                                       -> Object

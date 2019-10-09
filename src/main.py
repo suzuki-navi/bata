@@ -177,15 +177,14 @@ class TablePage(Page):
 
     def dig(self, arg):
         items = self.items()
-        result = re.match("\\A@([1-9][0-9]*)\\Z", arg)
-        if result:
-            idx = int(result.group(1))
-            if idx <= len(items):
-                return self.detailPage(items[idx - 1])
         nameColIdx = self.nameColIdx()
         for item in items:
             if item[nameColIdx] == arg:
                 return self.detailPage(item)
+        if re.match("\\A[0-9]*\\Z", arg):
+            idx = int(arg)
+            if idx >= 0 and idx < len(items):
+                return self.detailPage(items[idx])
         sys.stderr.write("Not found: {}".format(arg))
         sys.exit(1)
 
@@ -239,6 +238,14 @@ class ObjectElementPage(Page):
             if canonical != None:
                 canonical.append(arg)
             return ObjectElementPage(elem[arg], canonical)
+        elif re.match("\\A([0-9]*)\\Z", arg) and isinstance(elem, list):
+            idx = int(arg)
+            if idx < 0 or idx >= len(elem):
+                return None
+            canonical = self._canonical
+            if canonical != None:
+                canonical.append(arg)
+            return ObjectElementPage(elem[idx], canonical)
         else:
             return None
 

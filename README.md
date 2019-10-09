@@ -38,6 +38,7 @@ dockerなしの環境で動かすには Dockerfile 参照。
     glue jobs                                                                   -> Table
     glue jobs <JOB_NAME>                                                        -> Menu
     glue jobs <JOB_NAME> info                                                   -> Object
+    glue jobs <JOB_NAME> bookmark                                               -> Object
     glue jobs <JOB_NAME> history                                                -> Table
     glue jobs <JOB_NAME> history <RUN_ID>                                       -> Object
     iam                                                                         -> Menu
@@ -73,5 +74,10 @@ dockerなしの環境で動かすには Dockerfile 参照。
     s3 buckets <BUCKET_NAME> --alt                                              -> Menu
     s3 buckets <BUCKET_NAME> --alt versioning                                   -> Object
     s3 buckets <BUCKET_NAME> --alt policy                                       -> Object
+    support                                                                     -> Menu
+    support cases                                                               -> Table
+    support cases <CASE_ID>                                                     -> Object
+    vpc                                                                         -> Menu
+    vpc vpcs                                                                    -> Table
 
 

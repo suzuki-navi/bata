@@ -10,7 +10,7 @@ if [ $(docker images -q $image_name | wc -l) = 0 ]; then
     (
         cd $dir
         docker build -t $image_name .
-    )
+    ) >&2
 fi
 
 if [ -t 1 ]; then

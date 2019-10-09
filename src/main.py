@@ -21,7 +21,7 @@ def json_dump(obj):
         if isinstance(o, datetime):
             return o.isoformat()
         raise TypeError(repr(o) + " is not JSON serializable")
-    return json.dumps(obj, sort_keys=True, indent=4, default=support_othertype_default)
+    return json.dumps(obj, sort_keys=True, indent=4, ensure_ascii=False, default=support_othertype_default)
 
 def print_dump(obj):
     print(json_dump(obj))
@@ -262,6 +262,8 @@ class GlobalPage(MenuPage):
             ("lambda", LambdaPage),
             ("rds", RDSPage),
             ("s3", S3Page),
+            ("support", SupportPage),
+            ("vpc", VPCPage),
         ]
 
 ####################################################################################################
@@ -621,6 +623,7 @@ class GlueJobPage(MenuPage):
     def items(self):
         return [
             ("info", GlueJobInfoPage),
+            ("bookmark", GlueJobBookmarkPage),
             ("history", GlueJobHistoryPage),
         ]
 
@@ -640,6 +643,26 @@ class GlueJobInfoPage(ObjectPage):
             JobName = self.job_name,
         )
         return meta["Job"]
+
+class GlueJobBookmarkPage(ObjectPage):
+    def __init__(self, job_name):
+        self.job_name = job_name
+
+    def canonical(self):
+        return ["glue", "jobs", self.job_name, "bookmark"]
+
+    def object(self):
+        client = session.client("glue", region_name = region)
+        try:
+            meta = client.get_job_bookmark(
+                JobName = self.job_name,
+            )
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "EntityNotFoundException":
+                return None
+            else:
+                raise e
+        return meta["JobBookmarkEntry"]
 
 class GlueJobHistoryPage(TablePage):
     def __init__(self, job_name):
@@ -1154,6 +1177,80 @@ class S3ObjectPage(ObjectPage):
         del(info["ResponseMetadata"])
         del(info["Body"])
         return info
+
+####################################################################################################
+
+class SupportPage(MenuPage):
+    def canonical(self):
+        return ["support"]
+
+    def items(self):
+        return [
+            ("cases", SupportCasesPage),
+        ]
+
+class SupportCasesPage(TablePage):
+    def canonical(self):
+        return ["support", "cases"]
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("support")
+        ls = client.describe_cases(
+            language = "ja", # TODO
+        )
+        items = []
+        for elem in ls["cases"]:
+            items.append([elem["caseId"], elem["timeCreated"], elem["language"], elem["subject"]])
+        return items
+
+    def detailPage(self, item):
+        return SupportCasePage(item[0], item[2])
+
+class SupportCasePage(ObjectPage):
+    def __init__(self, case_id, language):
+        self.case_id = case_id
+        self.language = language
+
+    def canonical(self):
+        return ["support", "cases", self.case_id]
+
+    def object(self):
+        client = session.client("support")
+        info = client.describe_cases(
+            caseIdList = [self.case_id],
+            language = self.language,
+        )
+        return info["cases"][0]
+
+####################################################################################################
+
+class VPCPage(MenuPage):
+    def canonical(self):
+        return ["vpc"]
+
+    def items(self):
+        return [("vpcs", VPCVPCsPage)]
+
+class VPCVPCsPage(TablePage):
+    def canonical(self):
+        return ["vpc", "vpcs"]
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("ec2")
+        ls = client.describe_vpcs()
+        items = []
+        for elem in ls["Vpcs"]:
+            items.append([elem["VpcId"]])
+        return items
+
+    #def detailPage(self, item):
+    #    return VPCVPCPage(item[0])
 
 ####################################################################################################
 

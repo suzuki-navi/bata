@@ -261,6 +261,7 @@ class GlobalPage(MenuPage):
             ("iam", IAMPage),
             ("lambda", LambdaPage),
             ("rds", RDSPage),
+            ("redshift", RedshiftPage),
             ("s3", S3Page),
             ("support", SupportPage),
             ("vpc", VPCPage),
@@ -293,10 +294,14 @@ class CodeCommitPage(TablePage):
 ####################################################################################################
 
 class CloudWatchPage(MenuPage):
+    def canonical(self):
+        return ["cloudwatch"]
+
     def items(self):
         return [
             ("events", CloudWatchEventsPage),
             ("logs", CloudWatchLogsPage),
+            ("metrics", CloudWatchMetricsPage),
         ]
 
 class CloudWatchEventsPage(MenuPage):
@@ -392,6 +397,30 @@ class CloudWatchLogStreamEventsPage(TablePage):
 #    def __init__(self, log_group_name, log_stream_name):
 #        self.log_group_name = log_group_name
 #        self.log_stream_name = log_stream_name
+
+class CloudWatchMetricsPage(TablePage):
+    def canonical(self):
+        return ["cloudwatch", "metrics"]
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("cloudwatch", region_name = region)
+        ls = client.list_metrics(
+        )
+        items = []
+        for elem in ls["Metrics"]:
+            dims = ""
+            for dim in elem["Dimensions"]:
+                if dims != "":
+                    dims += " "
+                dims += "{}:{}".format(dim["Name"], dim["Value"])
+            items.append([elem["Namespace"], elem["MetricName"], dims])
+        return items
+
+    #def detailPage(self, item):
+    #    return CloudWatchMetricsPage(item[0])
 
 
 ####################################################################################################
@@ -522,6 +551,9 @@ class GlueTablePage(ObjectPage):
         self.database_name = database_name
         self.table_name = table_name
 
+    def alt(self):
+        return GlueTableAltPage(self.database_name, self.table_name)
+
     def object(self):
         client = session.client("glue", region_name = region)
         meta = client.get_table(
@@ -530,6 +562,39 @@ class GlueTablePage(ObjectPage):
         )
         #del(meta["ResponseMetadata"])
         return meta["Table"]
+
+class GlueTableAltPage(MenuPage):
+    def __init__(self, database_name, table_name):
+        self.database_name = database_name
+        self.table_name = table_name
+
+    def items(self):
+        return [
+            ("partitions", GlueTableAltPartitionsPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.database_name, self.table_name)
+
+class GlueTableAltPartitionsPage(TablePage):
+    def __init__(self, database_name, table_name):
+        self.database_name = database_name
+        self.table_name = table_name
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("glue", region_name = region)
+        ls = client.get_partitions(
+            DatabaseName = self.database_name,
+            TableName = self.table_name,
+        )
+        items = []
+        for elem in ls["Partitions"]:
+            values = "/".join(elem["Values"])
+            items.append([values])
+        return items
 
 class GlueConnectionsPage(TablePage):
     def canonical(self):
@@ -1045,6 +1110,73 @@ class RDSDatabaseInfoPage(ObjectPage):
         return ls["DBInstances"][0]
 
 ####################################################################################################
+
+class RedshiftPage(MenuPage):
+    def canonical(self):
+        return ["redshift"]
+
+    def items(self):
+        return [("clusters", RedshiftClustersPage)]
+
+class RedshiftClustersPage(TablePage):
+    def canonical(self):
+        return ["redshift", "clusters"]
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("redshift", region_name = region)
+        ls = client.describe_clusters()
+        items = []
+        for elem in ls["Clusters"]:
+            items.append([elem["ClusterIdentifier"], elem["Endpoint"]["Address"]])
+        return items
+
+    def detailPage(self, item):
+        return RedshiftClusterPage(item[0])
+
+class RedshiftClusterPage(TablePage):
+    def __init__(self, cluster_identifier):
+        self.cluster_identifier = cluster_identifier
+
+    def canonical(self):
+        return ["redshift", "clusters", self.cluster_identifier]
+
+    def alt(self):
+        return RedshiftClusterAltPage(self.cluster_identifier)
+
+class RedshiftClusterAltPage(MenuPage):
+    def __init__(self, cluster_identifier):
+        self.cluster_identifier = cluster_identifier
+
+    def canonical(self):
+        return ["redshift", "clusters", self.cluster_identifier, "--alt"]
+
+    def items(self):
+        return [
+            #("parameters", RedshiftClusterParametersPage),
+        ]
+
+    #def detailPage(self, item):
+    #    return item[1](self.cluster_identifier)
+
+#class RedshiftClusterParametersPage(ObjectPage):
+#    def __init__(self, cluster_identifier):
+#        self.cluster_identifier = cluster_identifier
+#
+#    def canonical(self):
+#        return ["redshift", "clusters", self.cluster_identifier, "--alt", "info"]
+#
+#    def object(self):
+#        client = session.client("redshift", region_name = region)
+#        ls = client.describe_cluster_parameters(
+#            DBInstanceIdentifier = self.cluster_identifier,
+#        )
+#        return ls["DBInstances"][0]
+
+
+    ####################################################################################################
 
 class S3Page(MenuPage):
     def items(self):

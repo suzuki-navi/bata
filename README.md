@@ -22,6 +22,7 @@ dockerなしの環境で動かすには Dockerfile 参照。
     cloudwatch logs                                                             -> Table
     cloudwatch logs <LOG_GROUP_NAME>                                            -> Table
     cloudwatch logs <LOG_GROUP_NAME> <LOG_STREAM_NAME>                          -> Table
+    cloudwatch metrics                                                          -> Table
     ecr                                                                         -> Menu
     ecr repositories                                                            -> Table
     ecr repositories <REPOSITORY_NAME>                                          -> Table
@@ -30,6 +31,8 @@ dockerなしの環境で動かすには Dockerfile 参照。
     glue databases                                                              -> Table
     glue databases <DATABASE_NAME>                                              -> Table
     glue databases <DATABASE_NAME> <TABLE_NAME>                                 -> Object
+    glue databases <DATABASE_NAME> <TABLE_NAME> --alt                           -> Menu
+    glue databases <DATABASE_NAME> <TABLE_NAME> --alt partitions                -> Table
     glue databases <DATABASE_NAME> --alt                                        -> Object
     glue connections                                                            -> Table
     glue connections <CONNECTION_NAME>                                          -> Menu
@@ -66,6 +69,10 @@ dockerなしの環境で動かすには Dockerfile 参照。
     rds databases <DATABASE_INSTANCE_IDENTIFIER>                                -> Not implemented
     rds databases <DATABASE_INSTANCE_IDENTIFIER> --alt                          -> Menu
     rds databases <DATABASE_INSTANCE_IDENTIFIER> --alt info                     -> Object
+    redshift                                                                    -> Menu
+    redshift clusters                                                           -> Table
+    redshift clusters <CLUSTER_IDENTIFIER>                                      -> Not implemented
+    redshift clusters <CLUSTER_IDENTIFIER> --alt                                -> Menu
     s3                                                                          -> Table
     s3 buckets                                                                  -> Table
     s3 buckets <BUCKET_NAME>                                                    -> Table

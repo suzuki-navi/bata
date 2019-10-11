@@ -4,7 +4,7 @@ import json
 import re
 import boto3
 import botocore
-from datetime import datetime
+import datetime
 
 session = boto3.session.Session()
 args = sys.argv[1:]
@@ -18,7 +18,7 @@ if len(args) > 1 and args[0] == "--profile":
 
 def json_dump(obj):
     def support_othertype_default(o):
-        if isinstance(o, datetime):
+        if isinstance(o, datetime.datetime):
             return o.isoformat()
         raise TypeError(repr(o) + " is not JSON serializable")
     return json.dumps(obj, sort_keys=True, indent=4, ensure_ascii=False, default=support_othertype_default)
@@ -27,7 +27,7 @@ def print_dump(obj):
     print(json_dump(obj))
 
 def table_col_to_str(o):
-    if isinstance(o, datetime):
+    if isinstance(o, datetime.datetime):
         return o.isoformat()
     else:
         return str(o)
@@ -36,14 +36,11 @@ def print_table(records):
     record_count = len(records)
     if record_count == 0:
         return
-    head_count = record_count
-    if head_count > 100:
-        head_count = 100
     col_count = len(records[0])
     col_width_list = []
     for j in range(col_count):
         col_width_list.append(0)
-    for i in range(head_count):
+    for i in range(record_count):
         record = records[i]
         for j in range(col_count):
             s = table_col_to_str(record[j])
@@ -62,6 +59,15 @@ def print_table(records):
             pad1 = " "
         sys.stdout.write("\n")
 
+def normalize_command_args(args):
+    ret = []
+    for elem in args:
+        if re.match("\\A[-_=/.,:A-Za-z0-9]+\\Z", elem):
+            ret.append(elem)
+        else:
+            ret.append("'" + elem + "'") # TODO escape
+    return " ".join(ret)
+
 ####################################################################################################
 
 class Page:
@@ -69,10 +75,13 @@ class Page:
         sys.stderr.write("Unknown object: {}".format(arg))
         sys.exit(1)
 
+    def canonical(self):
+        return None
+
     def alt(self):
         return None
 
-    def canonical(self):
+    def see_also(self):
         return None
 
     def view(self):
@@ -100,7 +109,7 @@ class Page:
         canonical = self.canonical()
         if sys.stdout.isatty():
             if canonical != None:
-                print("# canonical: " + (" ".join(canonical)))
+                print("# canonical: bata8 " + normalize_command_args(canonical))
             alt_page = self.alt()
             if alt_page != None:
                 if isinstance(alt_page, MenuPage):
@@ -108,6 +117,10 @@ class Page:
                         print("# see-also: ... --alt {}".format(item[0]))
                 else:
                     print("# see-also: ... --alt")
+            see_also_list = self.see_also()
+            if see_also_list != None:
+                for see_also in see_also_list:
+                    print("# see-also: " + normalize_command_args(see_also))
         self.view()
 
     def _digs(self, args):
@@ -263,6 +276,7 @@ class GlobalPage(MenuPage):
             ("rds", RDSPage),
             ("redshift", RedshiftPage),
             ("s3", S3Page),
+            ("sts", STSPage),
             ("support", SupportPage),
             ("vpc", VPCPage),
         ]
@@ -402,6 +416,9 @@ class CloudWatchMetricsPage(TablePage):
     def canonical(self):
         return ["cloudwatch", "metrics"]
 
+    def alt(self):
+        return CloudWatchMetricsAltPage()
+
     def nameColIdx(self):
         return 0
 
@@ -409,19 +426,216 @@ class CloudWatchMetricsPage(TablePage):
         client = session.client("cloudwatch", region_name = region)
         ls = client.list_metrics(
         )
+        namespaces = []
+        for elem in ls["Metrics"]:
+            namespaces.append(elem["Namespace"])
+        namespaces = list(set(namespaces))
+        items = []
+        for elem in namespaces:
+            items.append([elem])
+        items.sort()
+        return items
+
+    def detailPage(self, item):
+        return CloudWatchMetricsNamespacePage(item[0])
+
+    def dig(self, arg):
+        if re.match("\\A[0-9]*\\Z", arg):
+            return super().dig(arg)
+        return CloudWatchMetricsNamespacePage(arg)
+
+class CloudWatchMetricsAltPage(MenuPage):
+    def items(self):
+        return [
+            ("all", CloudWatchMetricsAllPage),
+        ]
+
+    def detailPage(self, item):
+        if item[0] == "all":
+            return item[1](None, None)
+        else:
+            return item[1]()
+
+class CloudWatchMetricsNamespacePage(TablePage):
+    def __init__(self, namespace):
+        self.namespace = namespace
+
+    def canonical(self):
+        return ["cloudwatch", "metrics", self.namespace]
+
+    def alt(self):
+        return CloudWatchMetricsNamespaceAltPage(self.namespace)
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("cloudwatch", region_name = region)
+        ls = client.list_metrics(
+            Namespace = self.namespace,
+        )
+        metricNames = []
+        for elem in ls["Metrics"]:
+            metricNames.append(elem["MetricName"])
+        metricNames = list(set(metricNames))
+        items = []
+        for elem in metricNames:
+            items.append([elem])
+        items.sort()
+        return items
+
+    def detailPage(self, item):
+        return CloudWatchMetricsAllPage(self.namespace, item[0])
+
+    def dig(self, arg):
+        if re.match("\\A[0-9]*\\Z", arg):
+            return super().dig(arg)
+        return CloudWatchMetricsAllPage(self.namespace, arg)
+
+class CloudWatchMetricsNamespaceAltPage(MenuPage):
+    def __init__(self, namespace):
+        self.namespace = namespace
+
+    def items(self):
+        return [
+            ("all", CloudWatchMetricsAllPage),
+        ]
+
+    def detailPage(self, item):
+        if item[0] == "all":
+            return item[1](self.namespace, None)
+        else:
+            return item[1](self.namespace)
+
+class CloudWatchMetricsAllPage(TablePage):
+    # namespace, metric_name はNone可
+    def __init__(self, namespace, metric_name):
+        self.namespace = namespace
+        self.metric_name = metric_name
+
+    def canonical(self):
+        if self.namespace == None:
+            return ["cloudwatch", "metrics", "--alt", "all"]
+        elif self.metric_name == None:
+            return ["cloudwatch", "metrics", self.namespace, "--alt", "all"]
+        else:
+            return ["cloudwatch", "metrics", self.namespace, self.metric_name]
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("cloudwatch", region_name = region)
+        if self.namespace == None:
+            ls = client.list_metrics(
+            )
+        elif self.metric_name == None:
+            ls = client.list_metrics(
+                Namespace = self.namespace,
+            )
+        else:
+            ls = client.list_metrics(
+                Namespace = self.namespace,
+                MetricName = self.metric_name,
+            )
         items = []
         for elem in ls["Metrics"]:
             dims = ""
             for dim in elem["Dimensions"]:
                 if dims != "":
-                    dims += " "
+                    dims += ","
                 dims += "{}:{}".format(dim["Name"], dim["Value"])
-            items.append([elem["Namespace"], elem["MetricName"], dims])
+            if self.namespace == None:
+                items.append([elem["Namespace"], elem["MetricName"], dims])
+            elif self.metric_name == None:
+                items.append([elem["MetricName"], dims])
+            else:
+                items.append([dims])
+        items.sort()
         return items
+        #items2 = []
+        #for i in range(len(items)):
+        #    items2.append([str(i)] + items[i])
+        #return items2
 
-    #def detailPage(self, item):
-    #    return CloudWatchMetricsPage(item[0])
+    def detailPage(self, item):
+        if self.namespace == None:
+            return CloudWatchMetricsNamespaceMetricDimensionPage(item[0], item[1], item[2])
+        elif self.metric_name == None:
+            return CloudWatchMetricsNamespaceMetricDimensionPage(self.namespace, item[0], item[1])
+        else:
+            return CloudWatchMetricsNamespaceMetricDimensionPage(self.namespace, self.metric_name, item[0])
 
+    #def dig(self, arg):
+    #    if re.match("\\A[0-9]*\\Z", arg):
+    #        return super().dig(arg)
+    #    return CloudWatchMetricsNamespaceMetricDimensionPage(arg)
+
+class CloudWatchMetricsNamespaceMetricDimensionPage(TablePage):
+    def __init__(self, namespace, metric_name, dimension):
+        self.namespace = namespace
+        self.metric_name = metric_name
+        self.dimension = dimension
+
+    def _now(self):
+        now = datetime.datetime.now()
+        now = now - datetime.timedelta(seconds = now.second)
+        now = now - datetime.timedelta(microseconds = now.microsecond)
+        return now
+
+    def canonical(self):
+        return ["cloudwatch", "metrics", self.namespace, self.metric_name, self.dimension]
+
+    def see_also(self):
+        now = self._now()
+        dimensions = []
+        if self.dimension != "":
+            dimensions.append("--dimensions")
+            for elem in self.dimension.split(","):
+                [k, v] = elem.split(":", 1)
+                dimensions.append("Name={},Value={}".format(k, v))
+        cmd = [
+                "aws", "cloudwatch", "get-metric-statistics",
+                "--namespace", self.namespace,
+                "--metric-name", self.metric_name,
+            ] + dimensions + [
+                "--start-time", (now - datetime.timedelta(days = 1)).isoformat(),
+                "--end-time", now.isoformat(),
+                "--period", "60",
+                "--statistics", "Average",
+                "--output", "text",
+            ]
+        return [cmd]
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        now = self._now()
+        dimensions = []
+        if self.dimension != "":
+            for elem in self.dimension.split(","):
+                [k, v] = elem.split(":", 1)
+                dimensions.append({"Name": k, "Value": v})
+        client = session.client("cloudwatch", region_name = region)
+        ls = client.get_metric_statistics(
+            Namespace = self.namespace,
+            MetricName = self.metric_name,
+            Dimensions = dimensions,
+            Statistics = ["Average"],
+            StartTime = now - datetime.timedelta(days = 1),
+            EndTime = now,
+            Period = 60,
+        )
+        items = []
+        for elem in ls["Datapoints"]:
+            items.append([
+                elem["Timestamp"],
+                elem["Average"],
+                elem["Unit"],
+            ])
+        items.sort()
+        return items
 
 ####################################################################################################
 
@@ -828,6 +1042,9 @@ class IAMRolePage(TablePage):
     def alt(self):
         return IAMRoleMetaPage(self.role_name)
 
+    def canonical(self):
+        return ["iam", "roles", self.role_name]
+
     def nameColIdx(self):
         return 0
 
@@ -972,12 +1189,18 @@ class IAMPolicyVersionPage(ObjectPage):
 ####################################################################################################
 
 class LambdaPage(MenuPage):
+    def canonical(self):
+        return ["lambda"]
+
     def items(self):
         return [
             ("functions", LambdaFunctionsPage),
         ]
 
 class LambdaFunctionsPage(TablePage):
+    def canonical(self):
+        return ["lambda", "functions"]
+
     def nameColIdx(self):
         return 0
 
@@ -992,16 +1215,24 @@ class LambdaFunctionsPage(TablePage):
     def detailPage(self, item):
         return LambdaFunctionPage(item[0])
 
+    def dig(self, arg):
+        if re.match("\\A[0-9]*\\Z", arg):
+            return super().dig(arg)
+        return LambdaFunctionPage(arg)
 
 class LambdaFunctionPage(MenuPage):
     def __init__(self, function_name):
         self.function_name = function_name
+
+    def canonical(self):
+        return ["lambda", "functions", self.function_name]
 
     def items(self):
         return [
             ("code", LambdaFunctionCodePage),
             ("configuration", LambdaFunctionConfigurationPage),
             ("aliases", LambdaFunctionAliasesPage),
+            ("metrics", LambdaFunctionMetricsPage),
         ]
 
     def detailPage(self, item):
@@ -1010,6 +1241,9 @@ class LambdaFunctionPage(MenuPage):
 class LambdaFunctionCodePage(ObjectPage):
     def __init__(self, function_name):
         self.function_name = function_name
+
+    def canonical(self):
+        return ["lambda", "functions", self.function_name, "code"]
 
     def object(self):
         client = session.client("lambda", region_name = region)
@@ -1023,6 +1257,9 @@ class LambdaFunctionConfigurationPage(ObjectPage):
     def __init__(self, function_name):
         self.function_name = function_name
 
+    def canonical(self):
+        return ["lambda", "functions", self.function_name, "configuration"]
+
     def object(self):
         client = session.client("lambda", region_name = region)
         meta = client.get_function(
@@ -1035,6 +1272,9 @@ class LambdaFunctionAliasesPage(ObjectPage):
     def __init__(self, function_name):
         self.function_name = function_name
 
+    def canonical(self):
+        return ["lambda", "functions", self.function_name, "aliases"]
+
     #def object(self):
     #    client = session.client("lambda", region_name = region)
     #    meta = client.list_aliases(
@@ -1042,6 +1282,24 @@ class LambdaFunctionAliasesPage(ObjectPage):
     #    )
     #    del(meta["ResponseMetadata"])
     #    return meta
+
+class LambdaFunctionMetricsPage(MenuPage):
+    def __init__(self, function_name):
+        self.function_name = function_name
+
+    def canonical(self):
+        return ["lambda", "functions", self.function_name, "metrics"]
+
+    def items(self):
+        return [
+            ("duration", ),
+            ("errors", ),
+            ("invocations", ),
+            ("throttles", ),
+        ]
+
+    def detailPage(self, item):
+        return CloudWatchMetricsNamespaceMetricDimensionPage("AWS/Lambda", item[0].title(), "FunctionName:{}".format(self.function_name))
 
 ####################################################################################################
 
@@ -1130,11 +1388,22 @@ class RedshiftClustersPage(TablePage):
         ls = client.describe_clusters()
         items = []
         for elem in ls["Clusters"]:
-            items.append([elem["ClusterIdentifier"], elem["Endpoint"]["Address"]])
+            if "Endpoint" in elem and "Address" in elem["Endpoint"]:
+                endpoint = elem["Endpoint"]["Address"]
+            else:
+                endpoint = "-"
+            # creatingのクラスタは Endpoint の要素がない
+            # deletingのクラスタは Endpoint の要素はあるけど Address の要素がない
+            items.append([elem["ClusterIdentifier"], endpoint])
         return items
 
     def detailPage(self, item):
         return RedshiftClusterPage(item[0])
+
+    def dig(self, arg):
+        if re.match("\\A[0-9]*\\Z", arg):
+            return super().dig(arg)
+        return RedshiftClusterPage(arg)
 
 class RedshiftClusterPage(TablePage):
     def __init__(self, cluster_identifier):
@@ -1146,6 +1415,28 @@ class RedshiftClusterPage(TablePage):
     def alt(self):
         return RedshiftClusterAltPage(self.cluster_identifier)
 
+    def see_also(self):
+        client = session.client("redshift", region_name = region)
+        ls = client.describe_clusters(
+            ClusterIdentifier = self.cluster_identifier,
+        )
+        info = ls["Clusters"][0]
+        if "Endpoint" in info and "Address" in info["Endpoint"]:
+            endpoint = info["Endpoint"]["Address"]
+            port = str(info["Endpoint"]["Port"])
+            user = info["MasterUsername"]
+            dbname = info["DBName"]
+            cmd = [
+                "PGPASSWORD=XXXX",
+                "psql",
+                "-h", endpoint,
+                "-p", port,
+                "-U", user,
+                "-d", dbname]
+            return [cmd]
+        else:
+            return None
+
 class RedshiftClusterAltPage(MenuPage):
     def __init__(self, cluster_identifier):
         self.cluster_identifier = cluster_identifier
@@ -1155,28 +1446,65 @@ class RedshiftClusterAltPage(MenuPage):
 
     def items(self):
         return [
-            #("parameters", RedshiftClusterParametersPage),
+            ("info", RedshiftClusterInfoPage),
+            ("vpc", ),
+            ("roles", RedshiftClusterRolesPage),
         ]
 
-    #def detailPage(self, item):
-    #    return item[1](self.cluster_identifier)
+    def detailPage(self, item):
+        if item[0] == "vpc":
+            client = session.client("redshift", region_name = region)
+            ls = client.describe_clusters(
+                ClusterIdentifier = self.cluster_identifier,
+            )
+            info = ls["Clusters"][0]
+            vpc_id = info["VpcId"]
+            return VPCVPCPage(vpc_id)
+        else:
+            return item[1](self.cluster_identifier)
 
-#class RedshiftClusterParametersPage(ObjectPage):
-#    def __init__(self, cluster_identifier):
-#        self.cluster_identifier = cluster_identifier
-#
-#    def canonical(self):
-#        return ["redshift", "clusters", self.cluster_identifier, "--alt", "info"]
-#
-#    def object(self):
-#        client = session.client("redshift", region_name = region)
-#        ls = client.describe_cluster_parameters(
-#            DBInstanceIdentifier = self.cluster_identifier,
-#        )
-#        return ls["DBInstances"][0]
+class RedshiftClusterInfoPage(ObjectPage):
+    def __init__(self, cluster_identifier):
+        self.cluster_identifier = cluster_identifier
 
+    def canonical(self):
+        return ["redshift", "clusters", self.cluster_identifier, "--alt", "info"]
 
-    ####################################################################################################
+    def object(self):
+        client = session.client("redshift", region_name = region)
+        ls = client.describe_clusters(
+            ClusterIdentifier = self.cluster_identifier,
+        )
+        return ls["Clusters"][0]
+
+class RedshiftClusterRolesPage(TablePage):
+    def __init__(self, cluster_identifier):
+        self.cluster_identifier = cluster_identifier
+
+    def canonical(self):
+        return ["redshift", "clusters", self.cluster_identifier, "--alt", "roles"]
+
+    def items(self):
+        client = session.client("sts")
+        info = client.get_caller_identity()
+        account = info["Account"]
+        client = session.client("redshift", region_name = region)
+        ls = client.describe_clusters(
+            ClusterIdentifier = self.cluster_identifier,
+        )
+        items = []
+        for elem in ls["Clusters"][0]["IamRoles"]:
+            arn = elem["IamRoleArn"]
+            arn2 = arn.split(":")
+            if arn2[4] == account:
+                if arn2[5].startswith("role/"):
+                    items.append([arn2[5][5:]])
+        return items
+
+    def detailPage(self, item):
+        return IAMRolePage(item[0])
+
+####################################################################################################
 
 class S3Page(MenuPage):
     def items(self):
@@ -1312,6 +1640,25 @@ class S3ObjectPage(ObjectPage):
 
 ####################################################################################################
 
+class STSPage(MenuPage):
+    def canonical(self):
+        return ["sts"]
+
+    def items(self):
+        return [("caller", STSCallerPage)]
+
+class STSCallerPage(ObjectPage):
+    def canonical(self):
+        return ["sts", "caller"]
+
+    def object(self):
+        client = session.client("sts")
+        info = client.get_caller_identity()
+        del(info["ResponseMetadata"])
+        return info
+
+####################################################################################################
+
 class SupportPage(MenuPage):
     def canonical(self):
         return ["support"]
@@ -1364,7 +1711,16 @@ class VPCPage(MenuPage):
         return ["vpc"]
 
     def items(self):
-        return [("vpcs", VPCVPCsPage)]
+        return [
+            ("vpcs", VPCVPCsPage),
+            ("subnets", ),
+        ]
+
+    def detailPage(self, item):
+        if item[0] == "subnets":
+            return VPCSubnetsPage(None)
+        else:
+            return item[1]()
 
 class VPCVPCsPage(TablePage):
     def canonical(self):
@@ -1374,15 +1730,99 @@ class VPCVPCsPage(TablePage):
         return 0
 
     def items(self):
-        client = session.client("ec2")
+        client = session.client("ec2", region_name = region)
         ls = client.describe_vpcs()
         items = []
         for elem in ls["Vpcs"]:
             items.append([elem["VpcId"]])
         return items
 
-    #def detailPage(self, item):
-    #    return VPCVPCPage(item[0])
+    def detailPage(self, item):
+        return VPCVPCPage(item[0])
+
+class VPCVPCPage(ObjectPage):
+    def __init__(self, vpc_id):
+        self.vpc_id = vpc_id
+
+    def canonical(self):
+        return ["vpc", "vpcs", self.vpc_id]
+
+    def alt(self):
+        return VPCVPCAltPage(self.vpc_id)
+
+    def object(self):
+        client = session.client("ec2", region_name = region)
+        info = client.describe_vpcs(
+            VpcIds = [self.vpc_id],
+        )
+        return info["Vpcs"][0]
+
+class VPCVPCAltPage(MenuPage):
+    def __init__(self, vpc_id):
+        self.vpc_id = vpc_id
+
+    def canonical(self):
+        return ["vpc", "vpcs", self.vpc_id, "--alt"]
+
+    def items(self):
+        return [
+            ("subnets", VPCSubnetsPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.vpc_id)
+
+class VPCSubnetsPage(TablePage):
+    # vpc_id はNone可
+    def __init__(self, vpc_id):
+        self.vpc_id = vpc_id
+
+    def canonical(self):
+        if self.vpc_id == None:
+            return ["vpc", "subnets"]
+        else:
+            return ["vpc", "vpcs", self.vpc_id, "--alt", "subnets"]
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("ec2", region_name = region)
+        if self.vpc_id == None:
+            ls = client.describe_subnets(
+            )
+        else:
+            ls = client.describe_subnets(
+                Filters = [
+                    { "Name": "vpc-id", "Values": [self.vpc_id] },
+                ],
+            )
+        items = []
+        for elem in ls["Subnets"]:
+            if self.vpc_id == None:
+                items.append([elem["SubnetId"], elem["VpcId"], elem["AvailabilityZone"], elem["CidrBlock"]])
+            else:
+                items.append([elem["SubnetId"], elem["AvailabilityZone"], elem["CidrBlock"]])
+        return items
+
+    def detailPage(self, item):
+        return VPCSubnetPage(item[0])
+
+class VPCSubnetPage(ObjectPage):
+    def __init__(self, subnet_id):
+        self.subnet_id = subnet_id
+
+    def canonical(self):
+        return ["vpc", "subnets", self.subnet_id]
+
+    def object(self):
+        client = session.client("ec2", region_name = region)
+        ls = client.describe_subnets(
+            Filters = [
+                { "Name": "subnet-id", "Values": [self.subnet_id] },
+            ],
+        )
+        return ls["Subnets"][0]
 
 ####################################################################################################
 

@@ -13,7 +13,7 @@ if [ $(docker images -q $image_name | wc -l) = 0 ]; then
     ) >&2
 fi
 
-if [ -t 1 ]; then
+if [ -t 0 -a -t 1 ]; then
     docker run -it --rm -v $dir:/usr/source -v $HOME/.aws:/root/.aws $image_name python3 /usr/source/src/main.py "$@"
 else
     docker run --rm -v $dir:/usr/source -v $HOME/.aws:/root/.aws $image_name python3 /usr/source/src/main.py "$@"

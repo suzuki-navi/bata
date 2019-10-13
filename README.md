@@ -51,6 +51,7 @@ dockerなしの環境で動かすには Dockerfile 参照。
     glue jobs <JOB_NAME> bookmark                                               -> Object
     glue jobs <JOB_NAME> history                                                -> Table
     glue jobs <JOB_NAME> history <RUN_ID>                                       -> Object
+    glue jobs <JOB_NAME> role                                                   -> Table
     iam                                                                         -> Menu
     iam users                                                                   -> Table
     iam users <USER_NAME>                                                       -> Object
@@ -77,6 +78,13 @@ dockerなしの環境で動かすには Dockerfile 参照。
     rds databases <DATABASE_INSTANCE_IDENTIFIER>                                -> Not implemented
     rds databases <DATABASE_INSTANCE_IDENTIFIER> --alt                          -> Menu
     rds databases <DATABASE_INSTANCE_IDENTIFIER> --alt info                     -> Object
+    rds databases <DATABASE_INSTANCE_IDENTIFIER> --alt vpc                      -> Object
+    rds databases <DATABASE_INSTANCE_IDENTIFIER> --alt snapshots                -> Table
+    rds snapshots                                                               -> Table
+    rds snapshots <SNAPSHOT_IDENTIFIER>                                         -> Object
+    rds snapshots <SNAPSHOT_IDENTIFIER> --alt                                   -> Menu
+    rds snapshots <SNAPSHOT_IDENTIFIER> --alt database                          -> Not implemented
+    rds snapshots <SNAPSHOT_IDENTIFIER> --alt vpc                               -> Object
     redshift                                                                    -> Menu
     redshift clusters                                                           -> Table
     redshift clusters <CLUSTER_IDENTIFIER>                                      -> Not implemented

@@ -1,0 +1,3 @@
+[console_scripts]
+bata8 = bata8.main:main
+

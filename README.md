@@ -2,13 +2,15 @@
 
 自作aws cliツール
 
-## 利用方法
+## Install
 
-dockerがインストールされていれば
+    $ git clone https://github.com/suzuki-navi/bata8.git
+    $ cd bata8
+    $ pip install -e .
 
-    $ ./bin/bata PARAMETERS ...
+## Usage
 
-dockerなしの環境で動かすには Dockerfile 参照。
+    $ bata8
 
 
 ## 対応しているメニュー

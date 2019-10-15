@@ -1,9 +1,11 @@
 
 from bata8.lib import *
 
+from bata8.awscloudformation import *
 from bata8.awscloudwatch import *
 from bata8.awscode import *
 from bata8.awsecr import *
+from bata8.awsecs import *
 from bata8.awsglue import *
 from bata8.awsiam import *
 from bata8.awslambda import *
@@ -19,8 +21,10 @@ class GlobalPage(MenuPage):
     def items(self):
         return [
             ("code", CodePage),
+            ("cloudformation", CloudFormationPage),
             ("cloudwatch", CloudWatchPage),
             ("ecr", ECRPage),
+            ("ecs", ECSPage),
             ("glue", GluePage),
             ("iam", IAMPage),
             ("lambda", LambdaPage),

@@ -45,6 +45,10 @@ class LambdaFunctionPage(MenuPage):
     def canonical(self):
         return ["lambda", "functions", self.function_name]
 
+    def see_also(self):
+        cmd1 = ["...", "code", "Location"]
+        return [cmd1]
+
     def items(self):
         return [
             ("code", LambdaFunctionCodePage),

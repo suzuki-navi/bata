@@ -28,7 +28,33 @@ class ECRRepositoriesPage(TablePage):
         return items
 
     def detailPage(self, item):
-        return ECRRepositoryImagesPage(item[0])
+        return ECRRepositoryPage(item[0])
+
+class ECRRepositoryPage(ObjectPage):
+    def __init__(self, repository_name):
+        self.repository_name = repository_name
+
+    def alt(self):
+        return ECRRepositoryAltPage(self.repository_name)
+
+    def object(self):
+        client = session.client("ecr", region_name = region)
+        ls = client.describe_repositories(
+            repositoryNames = [ self.repository_name ],
+        )
+        return ls["repositories"][0]
+
+class ECRRepositoryAltPage(MenuPage):
+    def __init__(self, repository_name):
+        self.repository_name = repository_name
+
+    def items(self):
+        return [
+            ("images", ECRRepositoryImagesPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.repository_name)
 
 class ECRRepositoryImagesPage(TablePage):
     def __init__(self, repository_name):
@@ -57,12 +83,11 @@ class ECRRepositoryImagePage(ObjectPage):
 
     def object(self):
         client = session.client("ecr", region_name = region)
-        meta = client.describe_images(
+        info = client.describe_images(
             repositoryName = self.repository_name,
             imageIds = [ { "imageTag": self.image_tag } ],
         )
-        #del(meta["ResponseMetadata"])
-        return meta["imageDetails"][0]
+        return info["imageDetails"][0]
 
 ####################################################################################################
 

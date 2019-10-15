@@ -17,6 +17,9 @@
 
     code                                                                        -> Menu
     code commit                                                                 -> Table
+    cloudformation                                                              -> Menu
+    cloudformation stacks                                                       -> Table
+    cloudformation stacks <STACK_NAME>                                          -> Object
     cloudwatch                                                                  -> Menu
     cloudwatch events                                                           -> Menu
     cloudwatch events rules                                                     -> Table
@@ -34,8 +37,13 @@
     cloudwatch metrics <NAMESPACE> <METRIC_NAME> <DIMENSIONS>                   -> Table
     ecr                                                                         -> Menu
     ecr repositories                                                            -> Table
-    ecr repositories <REPOSITORY_NAME>                                          -> Table
-    ecr repositories <REPOSITORY_NAME> <IMAGE_ID>                               -> Object
+    ecr repositories <REPOSITORY_NAME>                                          -> Object
+    ecr repositories <REPOSITORY_NAME> --alt                                    -> Menu
+    ecr repositories <REPOSITORY_NAME> --alt images                             -> Table
+    ecr repositories <REPOSITORY_NAME> --alt images <IMAGE_ID>                  -> Object
+    ecs                                                                         -> Menu
+    ecs clusters                                                                -> Table
+    ecs tasks                                                                   -> Table
     glue                                                                        -> Menu
     glue databases                                                              -> Table
     glue databases <DATABASE_NAME>                                              -> Table

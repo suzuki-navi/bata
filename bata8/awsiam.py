@@ -62,7 +62,7 @@ class IAMRolePage(TablePage):
         self.role_name = role_name
 
     def alt(self):
-        return IAMRoleMetaPage(self.role_name)
+        return IAMRoleAltPage(self.role_name)
 
     def canonical(self):
         return ["iam", "roles", self.role_name]
@@ -85,7 +85,7 @@ class IAMRolePage(TablePage):
             items.append([elem["PolicyName"], "attached"])
         return items
 
-class IAMRoleMetaPage(MenuPage):
+class IAMRoleAltPage(MenuPage):
     def __init__(self, role_name):
         self.role_name = role_name
 
@@ -133,7 +133,7 @@ class IAMPolicyPage(ObjectPage):
         self.policy_arn = policy_arn
 
     def alt(self):
-        return IAMPolicyMetaPage(self.policy_name, self.policy_arn)
+        return IAMPolicyAltPage(self.policy_name, self.policy_arn)
 
     def object(self):
         client = session.client("iam")
@@ -147,7 +147,7 @@ class IAMPolicyPage(ObjectPage):
         )
         return version_meta["PolicyVersion"]["Document"]
 
-class IAMPolicyMetaPage(MenuPage):
+class IAMPolicyAltPage(MenuPage):
     def __init__(self, policy_name, policy_arn):
         self.policy_name = policy_name
         self.policy_arn = policy_arn

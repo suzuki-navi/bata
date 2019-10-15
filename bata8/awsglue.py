@@ -38,7 +38,7 @@ class GlueDatabasePage(TablePage):
         self.database_name = database_name
 
     def alt(self):
-        return GlueDatabaseMetaPage(self.database_name)
+        return GlueDatabaseAltPage(self.database_name)
 
     def nameColIdx(self):
         return 0
@@ -56,7 +56,7 @@ class GlueDatabasePage(TablePage):
     def detailPage(self, item):
         return GlueTablePage(self.database_name, item[0])
 
-class GlueDatabaseMetaPage(ObjectPage):
+class GlueDatabaseAltPage(ObjectPage):
     def __init__(self, database_name):
         self.database_name = database_name
 

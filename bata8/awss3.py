@@ -7,10 +7,45 @@ from bata8.lib import *
 ####################################################################################################
 
 class S3Page(MenuPage):
+    def canonical(self):
+        return ["s3"]
+
+    def see_also(self):
+        cmd = ["bata8", "s3", "s3://.../..."]
+        return [cmd]
+
     def items(self):
         return [("buckets", S3BucketsPage)]
 
+    def dig(self, arg):
+        if re.match("\\As3://", arg):
+            return S3Page.page_from_uri(arg)
+        return super().dig(arg)
+
+    @classmethod
+    def page_from_uri(cls, path):
+        match = re.match("\\As3://([^/]+)\\Z", path)
+        if match:
+            return S3KeyPage(match.group(1), "")
+        match = re.match("\\As3://([^/]+)/(.*)\\Z", path)
+        if match:
+            bucket_name = match.group(1)
+            key = match.group(2)
+            if key.endswith("/"):
+                key = key[0:-1]
+            try:
+                return S3KeyPage(bucket_name, key)
+            except botocore.exceptions.ClientError as e:
+                if e.response["Error"]["Code"] == "AccessDenied":
+                    pass
+                else:
+                    raise e
+        return None
+
 class S3BucketsPage(TablePage):
+    def canonical(self):
+        return ["s3", "buckets"]
+
     def nameColIdx(self):
         return 0
 
@@ -25,20 +60,20 @@ class S3BucketsPage(TablePage):
     def detailPage(self, item):
         return S3DirPage(item[0], "")
 
-class S3BucketMetaPage(MenuPage):
+class S3BucketAltPage(MenuPage):
     def __init__(self, bucket_name):
         self.bucket_name = bucket_name
 
     def items(self):
         return [
-            ("versioning", S3BucketMetaVersioningPage),
-            ("policy", S3BucketMetaPolicyPage),
+            ("versioning", S3BucketVersioningPage),
+            ("policy", S3BucketPolicyPage),
         ]
 
     def detailPage(self, item):
         return item[1](self.bucket_name)
 
-class S3BucketMetaVersioningPage(ObjectPage):
+class S3BucketVersioningPage(ObjectPage):
     def __init__(self, bucket_name):
         self.bucket_name = bucket_name
 
@@ -50,7 +85,7 @@ class S3BucketMetaVersioningPage(ObjectPage):
         del(meta["ResponseMetadata"])
         return meta
 
-class S3BucketMetaPolicyPage(ObjectPage):
+class S3BucketPolicyPage(ObjectPage):
     def __init__(self, bucket_name):
         self.bucket_name = bucket_name
 
@@ -69,26 +104,34 @@ class S3BucketMetaPolicyPage(ObjectPage):
                 raise e
         return meta2
 
-class S3DirPage(TablePage):
-    def __init__(self, bucket_name, path):
+class S3KeyPage(ObjectPage):
+    def __init__(self, bucket_name, key):
         self.bucket_name = bucket_name
-        self.path = path
+        self.key = key
+        self.info  = self._fetch_info()
+        self.items = self._fetch_items()
 
-    def alt(self):
-        if self.path == "":
-            return S3BucketMetaPage(self.bucket_name)
-        else:
-            return super().alt()
+    def _fetch_info(self):
+        if self.key == "":
+            return None
+        try:
+            client = session.client("s3")
+            info = client.get_object(
+                Bucket = self.bucket_name,
+                Key = self.key,
+            )
+            del(info["ResponseMetadata"])
+            del(info["Body"])
+            return info
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchKey":
+                return None
+            else:
+                raise e
 
-    def nameColIdx(self):
-        return 0
-
-    def items(self):
+    def _fetch_items(self):
         client = session.client("s3")
-        if self.path == "":
-            prefix = ""
-        else:
-            prefix = self.path + "/"
+        prefix = self._prefix()
         ls = client.list_objects_v2(
             Bucket = self.bucket_name,
             Delimiter = "/",
@@ -112,31 +155,47 @@ class S3DirPage(TablePage):
                 items.append([name, elem["LastModified"], elem["Size"], elem["StorageClass"]])
         return items
 
-    def detailPage(self, item):
-        if self.path == "":
+    def _prefix(self):
+        if self.key == "":
             prefix = ""
         else:
-            prefix = self.path + "/"
-        path = prefix + item[0]
-        if item[1] == "":
-            return S3DirPage(self.bucket_name, path)
-        else:
-            return S3ObjectPage(self.bucket_name, path)
+            prefix = self.key + "/"
+        return prefix
 
-class S3ObjectPage(ObjectPage):
-    def __init__(self, bucket_name, key):
-        self.bucket_name = bucket_name
-        self.key = key
+    def s3path(self):
+        return "s3://{}/{}".format(self.bucket_name, self.key)
+
+    def canonical(self):
+        if len(self.key) == 0:
+            paths = []
+        else:
+            paths = self.key.split("/")
+        return ["s3", "buckets", self.bucket_name] + paths
+
+    def alt(self):
+        if self.key == "":
+            return S3BucketAltPage(self.bucket_name)
+        return super().alt()
+
+    def see_also(self):
+        if len(self.items) == 0:
+            cmd = ["aws", "s3", "cp", self.s3path(), "-"]
+        else:
+            cmd = ["aws", "s3", "ls", self.s3path() + "/"]
+        return [cmd]
+
+    def nameColIdx(self):
+        return 0
 
     def object(self):
-        client = session.client("s3")
-        info = client.get_object(
-            Bucket = self.bucket_name,
-            Key = self.key,
-        )
-        del(info["ResponseMetadata"])
-        del(info["Body"])
-        return info
+        if len(self.items) == 0:
+            return self.info
+        else:
+            return self.items
+
+    def detailPage(self, item):
+        key = self._prefix() + item[0]
+        return S3KeyPage(self.bucket_name, key)
 
 ####################################################################################################
 

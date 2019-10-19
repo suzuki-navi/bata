@@ -232,7 +232,7 @@ class TablePage(Page):
             idx = int(arg)
             if idx >= 0 and idx < len(items):
                 return self.detailPage(items[idx])
-        sys.stderr.write("Not found: {}".format(arg))
+        sys.stderr.write("Page not found: {}".format(arg))
         sys.exit(1)
 
     def view(self):
@@ -246,22 +246,45 @@ class ObjectPage(Page):
     def alt(self):
         return super().alt()
 
+    def nameColIdx(self):
+        return 0
+
     def object(self):
         return None
 
+    def detailPage(self, item):
+        return None
+
     def view(self):
-        meta = self.object()
-        print_dump(meta)
+        info = self.object()
+        if self._is_table(info):
+            print_table(info)
+        else:
+            print_dump(info)
 
     def dig(self, arg):
-        elem = self.object()
-        if arg in elem:
-            canonical = self.canonical()
-            if canonical != None:
-                canonical.append(arg)
-            return ObjectElementPage(elem[arg], canonical)
-        else:
-            return None
+        info = self.object()
+        if not self._is_table(info):
+            return ObjectElementPage(info, []).dig(arg)
+        items = info
+        nameColIdx = self.nameColIdx()
+        for item in items:
+            if item[nameColIdx] == arg:
+                return self.detailPage(item)
+        if re.match("\\A[0-9]*\\Z", arg):
+            idx = int(arg)
+            if idx >= 0 and idx < len(items):
+                return self.detailPage(items[idx])
+        sys.stderr.write("Page not found: {}".format(arg))
+        sys.exit(1)
+
+    def _is_table(self, info):
+        if isinstance(info, list):
+            if len(info) == 0:
+                return True
+            if isinstance(info[0], list):
+                return True
+        return False
 
 class ObjectElementPage(Page):
     def __init__(self, elem, canonical):

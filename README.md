@@ -75,6 +75,7 @@ Ubuntu 19.10
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt                              Menu   awsglue.GlueTableAltPage
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt partitions                   Table  awsglue.GlueTablePartitionsPage
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt partitions <PARTITION_VALUE> Object awsglue.GlueTablePartitionPage
+    glue databases <DATABASE_NAME> <TABLE_NAME> --alt location                     Table  awss3.S3KeyPage
     glue connections                                                               Table  awsglue.GlueConnectionsPage
     glue connections <CONNECTION_NAME>                                             Menu   awsglue.GlueConnectionPage
     glue crawlers                                                                  Table  awsglue.GlueCrawlersPage
@@ -129,12 +130,12 @@ Ubuntu 19.10
     redshift clusters <CLUSTER_IDENTIFIER> --alt roles <ROLE_NAME>                 Table  awsiam.IAMRolePage
     s3                                                                             Table  awss3.S3Page
     s3 buckets                                                                     Table  awss3.S3BucketsPage
-    s3 buckets <BUCKET_NAME>                                                       Table  awss3.S3DirPage
+    s3 buckets <BUCKET_NAME>                                                       Table  awss3.S3KeyPage
     s3 buckets <BUCKET_NAME> --alt                                                 Menu   awss3.S3BucketMetaPage
     s3 buckets <BUCKET_NAME> --alt versioning                                      Object awss3.S3BucketMetaVersioningPage
     s3 buckets <BUCKET_NAME> --alt policy                                          Object awss3.S3BucketMetaPolicyPage
-    s3 buckets <BUCKET_NAME> <PREFIX> ...                                          Table  awss3.S3DirPage
-    s3 buckets <BUCKET_NAME> <PREFIX> ... <KEY_NAME>                               Object awss3.S3ObjectPage
+    s3 buckets <BUCKET_NAME> <PREFIX> ...                                          Table  awss3.S3KeyPage
+    s3 buckets <BUCKET_NAME> <PREFIX> ... <KEY_NAME>                               Object awss3.S3KeyPage
     sts                                                                            Menu   awsiam.STSPage
     sts caller                                                                     Object awsiam.STSCallerPage
     support                                                                        Menu   awssupport.SupportPage

@@ -4,6 +4,8 @@ import botocore
 
 from bata8.lib import *
 
+from bata8.awss3 import *
+
 ####################################################################################################
 
 class GluePage(MenuPage):
@@ -72,17 +74,25 @@ class GlueTablePage(ObjectPage):
         self.database_name = database_name
         self.table_name = table_name
 
+    def _location(self):
+        client = session.client("glue", region_name = region)
+        info = client.get_table(
+            DatabaseName = self.database_name,
+            Name = self.table_name,
+        )
+        location = info["Table"]["StorageDescriptor"]["Location"]
+        return location
+
     def alt(self):
         return GlueTableAltPage(self.database_name, self.table_name)
 
     def object(self):
         client = session.client("glue", region_name = region)
-        meta = client.get_table(
+        info = client.get_table(
             DatabaseName = self.database_name,
             Name = self.table_name,
         )
-        #del(meta["ResponseMetadata"])
-        return meta["Table"]
+        return info["Table"]
 
 class GlueTableAltPage(MenuPage):
     def __init__(self, database_name, table_name):
@@ -90,11 +100,19 @@ class GlueTableAltPage(MenuPage):
         self.table_name = table_name
 
     def items(self):
-        return [
+        location = GlueTablePage(self.database_name, self.table_name)._location()
+        items = [
             ("partitions", GlueTablePartitionsPage),
         ]
+        if location.startswith("s3://"):
+            s3_page = S3Page.page_from_uri(location)
+            if s3_page != None:
+                items.append(("location", s3_page))
+        return items
 
     def detailPage(self, item):
+        if item[0] == "location":
+            return item[1]
         return item[1](self.database_name, self.table_name)
 
 class GlueTablePartitionsPage(TablePage):

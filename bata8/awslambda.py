@@ -4,6 +4,8 @@ import botocore
 
 from bata8.lib import *
 
+from bata8.awscloudwatch import *
+
 ####################################################################################################
 
 class LambdaPage(MenuPage):

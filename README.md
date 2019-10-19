@@ -108,6 +108,10 @@ Ubuntu 19.10
     lambda functions <FUNCTION_NAME> configuration                                 Object awslambda.LambdaFunctionConfigurationPage
     lambda functions <FUNCTION_NAME> aliases                                       Not implemented
     lambda functions <FUNCTION_NAME> metrics                                       Menu   awslambda.LambdaFunctionMetricsPage
+    lambda functions <FUNCTION_NAME> metrics duration                              Menu   awscloudwatch.CloudWatchMetricsNamespaceMetricDimensionPage
+    lambda functions <FUNCTION_NAME> metrics errors                                Menu   awscloudwatch.CloudWatchMetricsNamespaceMetricDimensionPage
+    lambda functions <FUNCTION_NAME> metrics invocations                           Menu   awscloudwatch.CloudWatchMetricsNamespaceMetricDimensionPage
+    lambda functions <FUNCTION_NAME> metrics throttles                             Menu   awscloudwatch.CloudWatchMetricsNamespaceMetricDimensionPage
     rds                                                                            Menu   awsrds.RDSPage
     rds databases                                                                  Table  awsrds.RDSDatabasesPage
     rds databases <DATABASE_INSTANCE_IDENTIFIER>                                   Not implemented awsrds.RDSDatabasePage
@@ -134,6 +138,9 @@ Ubuntu 19.10
     s3 buckets <BUCKET_NAME> --alt                                                 Menu   awss3.S3BucketMetaPage
     s3 buckets <BUCKET_NAME> --alt versioning                                      Object awss3.S3BucketMetaVersioningPage
     s3 buckets <BUCKET_NAME> --alt policy                                          Object awss3.S3BucketMetaPolicyPage
+    s3 buckets <BUCKET_NAME> --alt metrics                                         Menu   awss3.S3BucketMetaMetricsPage
+    s3 buckets <BUCKET_NAME> --alt metrics size                                    Table  awscloudwatch.CloudWatchMetricsNamespaceMetricDimensionPage
+    s3 buckets <BUCKET_NAME> --alt metrics count                                   Table  awscloudwatch.CloudWatchMetricsNamespaceMetricDimensionPage
     s3 buckets <BUCKET_NAME> <PREFIX> ...                                          Table  awss3.S3KeyPage
     s3 buckets <BUCKET_NAME> <PREFIX> ... <KEY_NAME>                               Object awss3.S3KeyPage
     sts                                                                            Menu   awsiam.STSPage

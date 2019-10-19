@@ -4,6 +4,8 @@ import botocore
 
 from bata8.lib import *
 
+from bata8.awscloudwatch import *
+
 ####################################################################################################
 
 class S3Page(MenuPage):
@@ -58,16 +60,20 @@ class S3BucketsPage(TablePage):
         return items
 
     def detailPage(self, item):
-        return S3DirPage(item[0], "")
+        return S3KeyPage(item[0], "")
 
 class S3BucketAltPage(MenuPage):
     def __init__(self, bucket_name):
         self.bucket_name = bucket_name
 
+    def canonical(self):
+        return ["s3", "buckets", self.bucket_name, "--alt"]
+
     def items(self):
         return [
             ("versioning", S3BucketVersioningPage),
             ("policy", S3BucketPolicyPage),
+            ("metrics", S3BucketMetricsPage),
         ]
 
     def detailPage(self, item):
@@ -76,6 +82,9 @@ class S3BucketAltPage(MenuPage):
 class S3BucketVersioningPage(ObjectPage):
     def __init__(self, bucket_name):
         self.bucket_name = bucket_name
+
+    def canonical(self):
+        return ["s3", "buckets", self.bucket_name, "--alt", "versioning"]
 
     def object(self):
         client = session.client("s3")
@@ -88,6 +97,9 @@ class S3BucketVersioningPage(ObjectPage):
 class S3BucketPolicyPage(ObjectPage):
     def __init__(self, bucket_name):
         self.bucket_name = bucket_name
+
+    def canonical(self):
+        return ["s3", "buckets", self.bucket_name, "--alt", "policy"]
 
     def object(self):
         client = session.client("s3")
@@ -103,6 +115,25 @@ class S3BucketPolicyPage(ObjectPage):
             else:
                 raise e
         return meta2
+
+class S3BucketMetricsPage(MenuPage):
+    def __init__(self, bucket_name):
+        self.bucket_name = bucket_name
+
+    def canonical(self):
+        return ["s3", "buckets", self.bucket_name, "--alt", "metrics"]
+
+    def items(self):
+        return [
+            ("size", "BucketSizeBytes", "StandardStorage"),
+            ("count", "NumberOfObjects", "AllStorageTypes"),
+        ]
+
+    def detailPage(self, item):
+        metric_name = item[1]
+        storage_type = item[2]
+        dimensions = "StorageType:{},BucketName:{}".format(storage_type, self.bucket_name)
+        return CloudWatchMetricsNamespaceMetricDimensionPage("AWS/S3", metric_name, dimensions)
 
 class S3KeyPage(ObjectPage):
     def __init__(self, bucket_name, key):

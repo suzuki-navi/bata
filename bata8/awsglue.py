@@ -91,13 +91,13 @@ class GlueTableAltPage(MenuPage):
 
     def items(self):
         return [
-            ("partitions", GlueTableAltPartitionsPage),
+            ("partitions", GlueTablePartitionsPage),
         ]
 
     def detailPage(self, item):
         return item[1](self.database_name, self.table_name)
 
-class GlueTableAltPartitionsPage(TablePage):
+class GlueTablePartitionsPage(TablePage):
     def __init__(self, database_name, table_name):
         self.database_name = database_name
         self.table_name = table_name
@@ -116,6 +116,28 @@ class GlueTableAltPartitionsPage(TablePage):
             values = "/".join(elem["Values"])
             items.append([values])
         return items
+
+    def detailPage(self, item):
+        return GlueTablePartitionPage(self.database_name, self.table_name, item[0])
+
+class GlueTablePartitionPage(ObjectPage):
+    def __init__(self, database_name, table_name, partition_value):
+        self.database_name = database_name
+        self.table_name = table_name
+        self.partition_value = partition_value
+
+    def canonical(self):
+        return ["glue", "databases", self.database_name, self.table_name, "--alt", "partitions", self.partition_value]
+
+    def object(self):
+        client = session.client("glue", region_name = region)
+        values = self.partition_value.split("/") # TODO "/" を含む値を扱えない問題
+        ls = client.get_partition(
+            DatabaseName = self.database_name,
+            TableName = self.table_name,
+            PartitionValues = values,
+        )
+        return ls["Partition"]
 
 class GlueConnectionsPage(TablePage):
     def canonical(self):

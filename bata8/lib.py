@@ -10,12 +10,19 @@ import boto3
 
 session = boto3.session.Session()
 region = "ap-northeast-1" # TODO
+#region = "us-west-2" # TODO
 
 args = sys.argv[1:]
 
-if len(args) > 1 and args[0] == "--profile":
-    session = boto3.session.Session(profile_name = args[1])
-    args = args[2:]
+while True:
+    if len(args) > 1 and args[0] == "--profile":
+        session = boto3.session.Session(profile_name = args[1])
+        args = args[2:]
+    elif len(args) > 1 and args[0] == "--region":
+        region = args[1]
+        args = args[2:]
+    else:
+        break
 
 ####################################################################################################
 
@@ -70,6 +77,30 @@ def normalize_command_args(args):
         else:
             ret.append("'" + elem + "'") # TODO escape
     return " ".join(ret)
+
+def tagsToLtsv(tags):
+    s = ""
+    for elem in tags:
+        key   = elem["Key"]
+        value = elem["Value"]
+        key   = re.sub('[:\s]+', ' ', key)
+        value = re.sub('\s+', ' ', value)
+        if s != "":
+            s = s + "\t"
+        s = s + "{}:{}".format(key, value)
+    return s
+
+def tagsToLtsvLike(tags):
+    s = ""
+    for elem in tags:
+        key   = elem["Key"]
+        value = elem["Value"]
+        key   = re.sub('[:\s]+', '_', key)
+        value = re.sub('\s+', '_', value)
+        if s != "":
+            s = s + ","
+        s = s + "{}:{}".format(key, value)
+    return s
 
 ####################################################################################################
 

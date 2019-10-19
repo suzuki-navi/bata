@@ -18,6 +18,7 @@ CentOS 7
 
 ## 対応しているメニュー
 
+    menu                                                                           type   implementing class
     code                                                                        -> Menu   awscode.CodePage
     code commit                                                                 -> Table  awscode.CodeCommitPage
     cloudformation                                                              -> Menu   awscloudformation.CloudFormationPage
@@ -38,6 +39,11 @@ CentOS 7
     cloudwatch metrics <NAMESPACE> --alt all                                    -> Table  awscloudwatch.CloudWatchMetricsAllPage
     cloudwatch metrics <NAMESPACE> <METRIC_NAME>                                -> Table  awscloudwatch.CloudWatchMetricsAllPage
     cloudwatch metrics <NAMESPACE> <METRIC_NAME> <DIMENSIONS>                   -> Table  awscloudwatch.CloudWatchMetricsNamespaceMetricDimensionPage
+    ec2                                                                         -> Menu   awsec2.EC2Page
+    ec2 instances                                                               -> Table  awsec2.EC2InstancesPage
+    ec2 instances <INSTANCE_ID>                                                 -> Object awsec2.EC2InstancePage
+    ec2 instances <INSTANCE_ID> --alt                                           -> Menu   awsec2.EC2InstanceAltPage
+    ec2 instances <INSTANCE_ID> --alt vpc                                       -> Object awsvpc.VPCVPCPage
     ecr                                                                         -> Menu   awsecr.ECRPage
     ecr repositories                                                            -> Table  awsecr.ECRRepositoriesPage
     ecr repositories <REPOSITORY_NAME>                                          -> Object awsecr.ECRRepositoryPage
@@ -53,7 +59,8 @@ CentOS 7
     glue databases <DATABASE_NAME> --alt                                        -> Object awsglue.GlueDatabaseAltPage
     glue databases <DATABASE_NAME> <TABLE_NAME>                                 -> Object awsglue.GlueTablePage
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt                           -> Menu   awsglue.GlueTableAltPage
-    glue databases <DATABASE_NAME> <TABLE_NAME> --alt partitions                -> Table  awsglue.GlueTableAltPartitionsPage
+    glue databases <DATABASE_NAME> <TABLE_NAME> --alt partitions                -> Table  awsglue.GlueTablePartitionsPage
+    glue databases <DATABASE_NAME> <TABLE_NAME> --alt partitions <PARTITION_VALUE> -> Object  awsglue.GlueTablePartitionPage
     glue connections                                                            -> Table  awsglue.GlueConnectionsPage
     glue connections <CONNECTION_NAME>                                          -> Menu   awsglue.GlueConnectionPage
     glue crawlers                                                               -> Table  awsglue.GlueCrawlersPage

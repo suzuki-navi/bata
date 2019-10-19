@@ -4,6 +4,9 @@ import botocore
 
 from bata8.lib import *
 
+from bata8.awsiam import *
+from bata8.awsvpc import *
+
 ####################################################################################################
 
 class RedshiftPage(MenuPage):

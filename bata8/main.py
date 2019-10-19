@@ -4,6 +4,7 @@ from bata8.lib import *
 from bata8.awscloudformation import *
 from bata8.awscloudwatch import *
 from bata8.awscode import *
+from bata8.awsec2 import *
 from bata8.awsecr import *
 from bata8.awsecs import *
 from bata8.awsglue import *
@@ -23,6 +24,7 @@ class GlobalPage(MenuPage):
             ("code", CodePage),
             ("cloudformation", CloudFormationPage),
             ("cloudwatch", CloudWatchPage),
+            ("ec2", EC2Page),
             ("ecr", ECRPage),
             ("ecs", ECSPage),
             ("glue", GluePage),

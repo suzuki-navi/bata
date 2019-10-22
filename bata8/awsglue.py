@@ -58,7 +58,19 @@ class GlueDatabasePage(TablePage):
     def detailPage(self, item):
         return GlueTablePage(self.database_name, item[0])
 
-class GlueDatabaseAltPage(ObjectPage):
+class GlueDatabaseAltPage(MenuPage):
+    def __init__(self, database_name):
+        self.database_name = database_name
+
+    def items(self):
+        return [
+            ("info", GlueDatabaseAltInfoPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.database_name)
+
+class GlueDatabaseAltInfoPage(ObjectPage):
     def __init__(self, database_name):
         self.database_name = database_name
 
@@ -103,6 +115,7 @@ class GlueTableAltPage(MenuPage):
         location = GlueTablePage(self.database_name, self.table_name)._location()
         items = [
             ("partitions", GlueTablePartitionsPage),
+            ("versions", GlueTableVersionsPage),
         ]
         if location.startswith("s3://"):
             s3_page = S3Page.page_from_uri(location)
@@ -156,6 +169,43 @@ class GlueTablePartitionPage(ObjectPage):
             PartitionValues = values,
         )
         return ls["Partition"]
+
+class GlueTableVersionsPage(TablePage):
+    def __init__(self, database_name, table_name):
+        self.database_name = database_name
+        self.table_name = table_name
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("glue", region_name = region)
+        ls = client.get_table_versions(
+            DatabaseName = self.database_name,
+            TableName = self.table_name,
+        )
+        items = []
+        for elem in ls["TableVersions"]:
+            items.append([elem["VersionId"], elem["Table"]["CreateTime"], elem["Table"]["UpdateTime"]])
+        return items
+
+    def detailPage(self, item):
+        return GlueTableVersionPage(self.database_name, self.table_name, item[0])
+
+class GlueTableVersionPage(ObjectPage):
+    def __init__(self, database_name, table_name, version_id):
+        self.database_name = database_name
+        self.table_name = table_name
+        self.version_id = version_id
+
+    def object(self):
+        client = session.client("glue", region_name = region)
+        info = client.get_table_version(
+            DatabaseName = self.database_name,
+            TableName = self.table_name,
+            VersionId = self.version_id,
+        )
+        return info["TableVersion"]
 
 class GlueConnectionsPage(TablePage):
     def canonical(self):

@@ -257,7 +257,9 @@ class ObjectPage(Page):
 
     def view(self):
         info = self.object()
-        if self._is_table(info):
+        if isinstance(info, str):
+            print(info)
+        elif self._is_table(info):
             print_table(info)
         else:
             print_dump(info)

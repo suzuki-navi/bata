@@ -37,7 +37,12 @@ Ubuntu 19.10
     code commit                                                                    Table  awscode.CodeCommitPage
     cloudformation                                                                 Menu   awscloudformation.CloudFormationPage
     cloudformation stacks                                                          Table  awscloudformation.CloudFormationStacksPage
-    cloudformation stacks <STACK_NAME>                                             Object awscloudformation.CloudFormationStackPage
+    cloudformation stacks <STACK_NAME>                                             Menu   awscloudformation.CloudFormationStackPage
+    cloudformation stacks <STACK_NAME> info                                        Object awscloudformation.CloudFormationStackInfoPage
+    cloudformation stacks <STACK_NAME> template                                    Object awscloudformation.CloudFormationStackTemplatePage
+    cloudformation stacks <STACK_NAME> template --alt                              Menu   awscloudformation.CloudFormationStackTemplateAltPage
+    cloudformation stacks <STACK_NAME> template --alt summary                      Object awscloudformation.CloudFormationStackTemplateSummaryPage
+    cloudformation stacks <STACK_NAME> template --alt stages                       Object awscloudformation.CloudFormationStackTemplateStagesPage
     cloudwatch                                                                     Menu   awscloudwatch.CloudWatchPage
     cloudwatch events                                                              Menu   awscloudwatch.CloudWatchEventsPage
     cloudwatch events rules                                                        Table  awscloudwatch.CloudWatchEventsRulesPage
@@ -70,11 +75,14 @@ Ubuntu 19.10
     glue                                                                           Menu   awsglue.GluePage
     glue databases                                                                 Table  awsglue.GlueDatabasesPage
     glue databases <DATABASE_NAME>                                                 Table  awsglue.GlueDatabasePage
-    glue databases <DATABASE_NAME> --alt                                           Object awsglue.GlueDatabaseAltPage
+    glue databases <DATABASE_NAME> --alt                                           Menu   awsglue.GlueDatabaseAltPage
+    glue databases <DATABASE_NAME> --alt info                                      Object awsglue.GlueDatabaseAltInfoPage
     glue databases <DATABASE_NAME> <TABLE_NAME>                                    Object awsglue.GlueTablePage
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt                              Menu   awsglue.GlueTableAltPage
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt partitions                   Table  awsglue.GlueTablePartitionsPage
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt partitions <PARTITION_VALUE> Object awsglue.GlueTablePartitionPage
+    glue databases <DATABASE_NAME> <TABLE_NAME> --alt versions                     Table  awsglue.GlueTableVersionsPage
+    glue databases <DATABASE_NAME> <TABLE_NAME> --alt versions <VERSION_ID>        Object awsglue.GlueTableVersionPage
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt location                     Table  awss3.S3KeyPage
     glue connections                                                               Table  awsglue.GlueConnectionsPage
     glue connections <CONNECTION_NAME>                                             Menu   awsglue.GlueConnectionPage

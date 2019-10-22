@@ -197,11 +197,12 @@ class S3KeyPage(ObjectPage):
         return "s3://{}/{}".format(self.bucket_name, self.key)
 
     def canonical(self):
-        if len(self.key) == 0:
-            paths = []
-        else:
-            paths = self.key.split("/")
-        return ["s3", "buckets", self.bucket_name] + paths
+        return ["s3", self.s3path()]
+        #if len(self.key) == 0:
+        #    paths = []
+        #else:
+        #    paths = self.key.split("/")
+        #return ["s3", "buckets", self.bucket_name] + paths
 
     def alt(self):
         if self.key == "":
@@ -212,8 +213,17 @@ class S3KeyPage(ObjectPage):
         if len(self.items) == 0:
             cmd = ["aws", "s3", "cp", self.s3path(), "-"]
         else:
-            cmd = ["aws", "s3", "ls", self.s3path() + "/"]
+            if len(self.key) == 0:
+                cmd = ["aws", "s3", "ls", self.s3path()]
+            else:
+                cmd = ["aws", "s3", "ls", self.s3path() + "/"]
         return [cmd]
+
+    def arn(self):
+        if len(self.key) == 0:
+            return "arn:aws:s3:::{}".format(self.bucket_name)
+        else:
+            return "arn:aws:s3:::{}/{}".format(self.bucket_name, self.key)
 
     def nameColIdx(self):
         return 0

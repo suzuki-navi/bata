@@ -47,10 +47,6 @@ class LambdaFunctionPage(MenuPage):
     def canonical(self):
         return ["lambda", "functions", self.function_name]
 
-    def see_also(self):
-        cmd1 = ["...", "code", "Location"]
-        return [cmd1]
-
     def items(self):
         return [
             ("code", LambdaFunctionCodePage),
@@ -69,6 +65,9 @@ class LambdaFunctionCodePage(ObjectPage):
     def canonical(self):
         return ["lambda", "functions", self.function_name, "code"]
 
+    def help(self):
+        return LambdaFunctionCodeHelpPage(self.function_name)
+
     def object(self):
         client = session.client("lambda", region_name = region)
         meta = client.get_function(
@@ -76,6 +75,20 @@ class LambdaFunctionCodePage(ObjectPage):
         )
         #del(meta["ResponseMetadata"])
         return meta["Code"]
+
+class LambdaFunctionCodeHelpPage(ObjectPage):
+    def __init__(self, function_name):
+        self.function_name = function_name
+
+    def canonical(self):
+        return ["lambda", "functions", self.function_name, "code", "--help"]
+
+    def object(self):
+        msg = "To download source code,\n"
+        location_cmd = normalize_command_args(bata8_cmd + self.canonical()[:-1] + ["Location"])
+        msg = msg + "$ curl -Ssf $(" + location_cmd + ") > source.zip\n"
+        msg = msg + "$ unzip source.zip\n"
+        return msg
 
 class LambdaFunctionConfigurationPage(ObjectPage):
     def __init__(self, function_name):

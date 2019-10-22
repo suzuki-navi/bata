@@ -18,9 +18,7 @@ class ECSClustersPage(TablePage):
         return 0
 
     def items(self):
-        client = session.client("sts")
-        info = client.get_caller_identity()
-        account = info["Account"]
+        account = fetch_account_id()
         client = session.client("ecs", region_name = region)
         ls = client.list_clusters(
         )
@@ -67,9 +65,7 @@ class ECSTasksPage(TablePage):
         return 0
 
     def items(self):
-        client = session.client("sts")
-        info = client.get_caller_identity()
-        account = info["Account"]
+        account = fetch_account_id()
         client = session.client("ecs", region_name = region)
         ls = client.list_task_definitions(
         )

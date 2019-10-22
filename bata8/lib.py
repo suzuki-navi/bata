@@ -14,11 +14,15 @@ region = "ap-northeast-1" # TODO
 
 args = sys.argv[1:]
 
+bata8_cmd = ["bata8"]
+
 while True:
     if len(args) > 1 and args[0] == "--profile":
+        bata8_cmd = bata8_cmd + ["--profile", args[1]]
         session = boto3.session.Session(profile_name = args[1])
         args = args[2:]
     elif len(args) > 1 and args[0] == "--region":
+        bata8_cmd = bata8_cmd + ["--region", args[1]]
         region = args[1]
         args = args[2:]
     else:
@@ -118,19 +122,23 @@ class Page:
     def see_also(self):
         return None
 
-    def view(self):
-        pass
-
     def help(self):
+        return None
+
+    def arn(self):
+        return None
+
+    def view(self):
         pass
 
     def exec(self, args):
         if (len(args) == 0):
             page = self._digs(args)
             page._view()
-        elif args[-1] == "--help":
-            self.help()
         elif args[-1] == "--alt":
+            page = self._digs(args)
+            page._view()
+        elif args[-1] == "--help":
             page = self._digs(args)
             page._view()
         elif args[-1].startswith("-"):
@@ -142,19 +150,39 @@ class Page:
     def _view(self):
         canonical = self.canonical()
         if sys.stdout.isatty():
+            f = False
             if canonical != None:
-                print("# canonical: bata8 " + normalize_command_args(canonical))
+                print("# canonical: " + normalize_command_args(bata8_cmd + canonical))
+                f = True
+            arn = self.arn()
+            if arn != None:
+                print("# canonical: " + normalize_command_args(bata8_cmd + [arn]))
+                f = True
             alt_page = self.alt()
             if alt_page != None:
                 if isinstance(alt_page, MenuPage):
                     for item in alt_page.items():
                         print("# see-also: ... --alt {}".format(item[0]))
+                        f = True
                 else:
                     print("# see-also: ... --alt")
+                    f = True
+            help_page = self.help()
+            if help_page != None:
+                if isinstance(help_page, MenuPage):
+                    for item in help_page.items():
+                        print("# see-also: ... --help {}".format(item[0]))
+                        f = True
+                else:
+                    print("# see-also: ... --help")
+                    f = True
             see_also_list = self.see_also()
             if see_also_list != None:
                 for see_also in see_also_list:
                     print("# see-also: " + normalize_command_args(see_also))
+                    f = True
+            if f:
+                print("")
         self.view()
 
     def _digs(self, args):
@@ -164,7 +192,12 @@ class Page:
             if a == "--alt":
                 page = page.alt()
                 if page == None:
-                    sys.stderr.write("Meta page not found")
+                    sys.stderr.write("Alt page not found")
+                    sys.exit(1)
+            elif a == "--help":
+                page = page.help()
+                if page == None:
+                    sys.stderr.write("Help page not found")
                     sys.exit(1)
             elif a.startswith("-"):
                 sys.stderr.write("Unknown option: {}".format(args[-1]))
@@ -320,6 +353,14 @@ class ObjectElementPage(Page):
             return ObjectElementPage(elem[idx], canonical)
         else:
             return None
+
+####################################################################################################
+
+def fetch_account_id():
+    sts_client = session.client("sts")
+    info = sts_client.get_caller_identity()
+    account = info["Account"]
+    return account
 
 ####################################################################################################
 

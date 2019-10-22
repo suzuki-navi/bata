@@ -1,4 +1,6 @@
 
+import re
+
 from bata8.lib import *
 
 from bata8.awscloudformation import *
@@ -37,6 +39,21 @@ class GlobalPage(MenuPage):
             ("support", SupportPage),
             ("vpc", VPCPage),
         ]
+
+    def dig(self, arg):
+        if re.match("\\Aarn:.+", arg):
+            return GlobalPage.page_from_arn(arg)
+        return super().dig(arg)
+
+    @classmethod
+    def page_from_arn(cls, arn):
+        match = re.match("\\Aarn:aws:s3:::(.+?)/(.*)\\Z", arn)
+        if match:
+            return S3KeyPage(match.group(1), match.group(2))
+        match = re.match("\\Aarn:aws:s3:::(.+?)\\Z", arn)
+        if match:
+            return S3KeyPage(match.group(1), "")
+        return None
 
 ####################################################################################################
 

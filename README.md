@@ -37,12 +37,15 @@ Ubuntu 19.10
     code commit                                                                    Table  awscode.CodeCommitPage
     cloudformation                                                                 Menu   awscloudformation.CloudFormationPage
     cloudformation stacks                                                          Table  awscloudformation.CloudFormationStacksPage
+    cloudformation stacks --help                                                   Object awscloudformation.CloudFormationStacksHelpPage
     cloudformation stacks <STACK_NAME>                                             Menu   awscloudformation.CloudFormationStackPage
     cloudformation stacks <STACK_NAME> info                                        Object awscloudformation.CloudFormationStackInfoPage
     cloudformation stacks <STACK_NAME> template                                    Object awscloudformation.CloudFormationStackTemplatePage
     cloudformation stacks <STACK_NAME> template --alt                              Menu   awscloudformation.CloudFormationStackTemplateAltPage
     cloudformation stacks <STACK_NAME> template --alt summary                      Object awscloudformation.CloudFormationStackTemplateSummaryPage
     cloudformation stacks <STACK_NAME> template --alt stages                       Object awscloudformation.CloudFormationStackTemplateStagesPage
+    cloudformation stacks <STACK_NAME> resources                                   Table  awscloudformation.CloudFormationStackResourcesPage
+    cloudformation stacks <STACK_NAME> resources <LOGICAL_RESOURCE_ID>             Object awscloudformation.CloudFormationStackResourcePage
     cloudwatch                                                                     Menu   awscloudwatch.CloudWatchPage
     cloudwatch events                                                              Menu   awscloudwatch.CloudWatchEventsPage
     cloudwatch events rules                                                        Table  awscloudwatch.CloudWatchEventsRulesPage
@@ -116,6 +119,7 @@ Ubuntu 19.10
     lambda functions                                                               Table  awslambda.LambdaFunctionsPage
     lambda functions <FUNCTION_NAME>                                               Menu   awslambda.LambdaFunctionPage
     lambda functions <FUNCTION_NAME> code                                          Object awslambda.LambdaFunctionCodePage
+    lambda functions <FUNCTION_NAME> code --help                                   Object awslambda.LambdaFunctionCodeHelpPage
     lambda functions <FUNCTION_NAME> configuration                                 Object awslambda.LambdaFunctionConfigurationPage
     lambda functions <FUNCTION_NAME> aliases                                       Not implemented
     lambda functions <FUNCTION_NAME> metrics                                       Menu   awslambda.LambdaFunctionMetricsPage

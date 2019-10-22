@@ -125,9 +125,7 @@ class RedshiftClusterRolesPage(TablePage):
         return ["redshift", "clusters", self.cluster_identifier, "--alt", "roles"]
 
     def items(self):
-        client = session.client("sts")
-        info = client.get_caller_identity()
-        account = info["Account"]
+        account = fetch_account_id()
         client = session.client("redshift", region_name = region)
         ls = client.describe_clusters(
             ClusterIdentifier = self.cluster_identifier,

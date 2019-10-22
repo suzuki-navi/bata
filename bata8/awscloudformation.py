@@ -19,6 +19,9 @@ class CloudFormationStacksPage(TablePage):
     def canonical(self):
         return ["cloudformation", "stacks"]
 
+    def help(self):
+        return CloudFormationStacksHelpPage()
+
     def nameColIdx(self):
         return 0
 
@@ -39,6 +42,15 @@ class CloudFormationStacksPage(TablePage):
     def detailPage(self, item):
         return CloudFormationStackPage(item[0])
 
+class CloudFormationStacksHelpPage(ObjectPage):
+    def canonical(self):
+        return ["cloudformation", "stacks", "--help"]
+
+    def object(self):
+        msg = "To deploy the specified AWS CloudFormation template,\n"
+        msg = msg + "$ aws cloudformation deploy --stack-name <STACK_NAME> --template-file <TEMPLATE_LOCAL_FILE>\n"
+        return msg
+
 class CloudFormationStackPage(MenuPage):
     def __init__(self, stack_name):
         self.stack_name = stack_name
@@ -50,6 +62,7 @@ class CloudFormationStackPage(MenuPage):
         return [
             ("info", CloudFormationStackInfoPage),
             ("template", CloudFormationStackTemplatePage),
+            ("resources", CloudFormationStackResourcesPage),
         ]
 
     def detailPage(self, item):
@@ -130,6 +143,42 @@ class CloudFormationStackTemplateStagesPage(ObjectPage):
             StackName = self.stack_name,
         )
         return " ".join(info["StagesAvailable"])
+
+class CloudFormationStackResourcesPage(TablePage):
+    def __init__(self, stack_name):
+        self.stack_name = stack_name
+
+    def canonical(self):
+        return ["cloudformation", "stacks", self.stack_name, "resources"]
+
+    def items(self):
+        client = session.client("cloudformation", region_name = region)
+        ls = client.list_stack_resources(
+            StackName = self.stack_name,
+        )
+        items = []
+        for elem in ls["StackResourceSummaries"]:
+            items.append([elem["LogicalResourceId"], elem["ResourceType"]])
+        return items
+
+    def detailPage(self, item):
+        return CloudFormationStackResourcePage(self.stack_name, item[0])
+
+class CloudFormationStackResourcePage(ObjectPage):
+    def __init__(self, stack_name, logical_resource_id):
+        self.stack_name = stack_name
+        self.logical_resource_id = logical_resource_id
+
+    def canonical(self):
+        return ["cloudformation", "stacks", self.stack_name, "resources", self.logical_resource_id]
+
+    def object(self):
+        client = session.client("cloudformation", region_name = region)
+        info = client.describe_stack_resource(
+            StackName = self.stack_name,
+            LogicalResourceId = self.logical_resource_id,
+        )
+        return info["StackResourceDetail"]
 
 ####################################################################################################
 

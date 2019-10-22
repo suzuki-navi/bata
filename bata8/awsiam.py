@@ -30,16 +30,56 @@ class IAMUsersPage(TablePage):
     def detailPage(self, item):
         return IAMUserPage(item[0])
 
-class IAMUserPage(ObjectPage):
+class IAMUserPage(MenuPage):
+    def __init__(self, user_name):
+        self.user_name = user_name
+
+    def items(self):
+        return [
+            ("info", IAMUserInfoPage),
+            ("policies", IAMUserPoliciesPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.user_name)
+
+class IAMUserInfoPage(ObjectPage):
     def __init__(self, user_name):
         self.user_name = user_name
 
     def object(self):
         client = session.client("iam")
-        meta = client.get_user(
+        info = client.get_user(
             UserName = self.user_name,
         )
-        return meta["User"]
+        return info["User"]
+
+class IAMUserPoliciesPage(TablePage):
+    def __init__(self, user_name):
+        self.user_name = user_name
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("iam")
+        items = []
+        ls = client.list_user_policies(
+            UserName = self.user_name,
+        )
+        for elem in ls["PolicyNames"]:
+            items.append([elem, "-"])
+        ls = client.list_attached_user_policies(
+            UserName = self.user_name,
+        )
+        for elem in ls["AttachedPolicies"]:
+            items.append([elem["PolicyName"], elem["PolicyArn"]])
+        return items
+
+    def detailPage(self, item):
+        if item[1] == "-":
+            return None
+        return IAMPolicyPage(item[0], item[1])
 
 class IAMRolesPage(TablePage):
     def nameColIdx(self):
@@ -127,27 +167,7 @@ class IAMPoliciesPage(TablePage):
     def detailPage(self, item):
         return IAMPolicyPage(item[0], item[1])
 
-class IAMPolicyPage(ObjectPage):
-    def __init__(self, policy_name, policy_arn):
-        self.policy_name = policy_name
-        self.policy_arn = policy_arn
-
-    def alt(self):
-        return IAMPolicyAltPage(self.policy_name, self.policy_arn)
-
-    def object(self):
-        client = session.client("iam")
-        policy_meta = client.get_policy(
-            PolicyArn = self.policy_arn,
-        )
-        version_id = policy_meta["Policy"]["DefaultVersionId"]
-        version_meta = client.get_policy_version(
-            PolicyArn = self.policy_arn,
-            VersionId = version_id,
-        )
-        return version_meta["PolicyVersion"]["Document"]
-
-class IAMPolicyAltPage(MenuPage):
+class IAMPolicyPage(MenuPage):
     def __init__(self, policy_name, policy_arn):
         self.policy_name = policy_name
         self.policy_arn = policy_arn
@@ -155,6 +175,7 @@ class IAMPolicyAltPage(MenuPage):
     def items(self):
         return [
             ("info", IAMPolicyInfoPage),
+            ("statement", IAMPolicyStatementPage),
             ("versions", IAMPolicyVersionsPage),
         ]
 
@@ -172,6 +193,23 @@ class IAMPolicyInfoPage(ObjectPage):
             PolicyArn = self.policy_arn,
         )
         return meta["Policy"]
+
+class IAMPolicyStatementPage(ObjectPage):
+    def __init__(self, policy_name, policy_arn):
+        self.policy_name = policy_name
+        self.policy_arn = policy_arn
+
+    def object(self):
+        client = session.client("iam")
+        policy_meta = client.get_policy(
+            PolicyArn = self.policy_arn,
+        )
+        version_id = policy_meta["Policy"]["DefaultVersionId"]
+        version_meta = client.get_policy_version(
+            PolicyArn = self.policy_arn,
+            VersionId = version_id,
+        )
+        return version_meta["PolicyVersion"]["Document"]["Statement"]
 
 class IAMPolicyVersionsPage(TablePage):
     def __init__(self, policy_name, policy_arn):

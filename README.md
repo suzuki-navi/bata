@@ -89,18 +89,21 @@ Ubuntu 19.10
     glue jobs <JOB_NAME> role                                                      Table  awsiam.IAMRolePage
     iam                                                                            Menu   awsiam.IAMPage
     iam users                                                                      Table  awsiam.IAMUsersPage
-    iam users <USER_NAME>                                                          Object awsiam.IAMUserPage
+    iam users <USER_NAME>                                                          Menu   awsiam.IAMUserPage
+    iam users <USER_NAME> info                                                     Object awsiam.IAMUserInfoPage
+    iam users <USER_NAME> policies                                                 Table  awsiam.IAMUserPoliciesPage
+    iam users <USER_NAME> policies <POLICY_NAME>                                   Menu   awsiam.IAMPolicyPage
     iam roles                                                                      Table  awsiam.IAMRolesPage
     iam roles <ROLE_NAME>                                                          Table  awsiam.IAMRolePage
     iam roles <ROLE_NAME> --alt                                                    Menu   awsiam.IAMRoleAltPage
     iam roles <ROLE_NAME> --alt info                                               Object awsiam.IAMRoleInfoPage
     iam roles <ROLE_NAME> <POLICY_NAME>                                            Not implemented
     iam policies                                                                   Table  awsiam.IAMPoliciesPage
-    iam policies <POLICY_NAME>                                                     Object awsiam.IAMPolicyPage
-    iam policies <POLICY_NAME> --alt                                               Menu   awsiam.IAMPolicyAltPage
-    iam policies <POLICY_NAME> --alt info                                          Object awsiam.IAMPolicyInfoPage
-    iam policies <POLICY_NAME> --alt versions                                      Table  awsiam.IAMPolicyVersionsPage
-    iam policies <POLICY_NAME> --alt versions <VERSION_ID>                         Object awsiam.IAMPolicyVersionPage
+    iam policies <POLICY_NAME>                                                     Menu   awsiam.IAMPolicyPage
+    iam policies <POLICY_NAME> info                                                Object awsiam.IAMPolicyInfoPage
+    iam policies <POLICY_NAME> statement                                           Object awsiam.IAMPolicyStatementPage
+    iam policies <POLICY_NAME> versions                                            Table  awsiam.IAMPolicyVersionsPage
+    iam policies <POLICY_NAME> versions <VERSION_ID>                               Object awsiam.IAMPolicyVersionPage
     lambda                                                                         Menu   awslambda.LambdaPage
     lambda functions                                                               Table  awslambda.LambdaFunctionsPage
     lambda functions <FUNCTION_NAME>                                               Menu   awslambda.LambdaFunctionPage

@@ -33,16 +33,28 @@ class CloudWatchEventsRulesPage(TablePage):
         )
         items = []
         for elem in ls["Rules"]:
-            items.append([elem["Name"], elem["Arn"]])
+            items.append([elem["Name"], elem["ScheduleExpression"]])
         return items
 
     def detailPage(self, item):
-        return CloudWatchEventsRulePage(item[0], item[1])
+        return CloudWatchEventsRulePage(item[0])
 
-class CloudWatchEventsRulePage(ObjectPage):
-    def __init__(self, event_name, event_arn):
+class CloudWatchEventsRulePage(MenuPage):
+    def __init__(self, event_name):
         self.event_name = event_name
-        self.event_arn = event_arn
+
+    def items(self):
+        return [
+            ("info", CloudWatchEventsRuleInfoPage),
+            ("targets", CloudWatchEventsRuleTargetsPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.event_name)
+
+class CloudWatchEventsRuleInfoPage(ObjectPage):
+    def __init__(self, event_name):
+        self.event_name = event_name
 
     def object(self):
         client = session.client("events", region_name = region)
@@ -51,6 +63,38 @@ class CloudWatchEventsRulePage(ObjectPage):
         )
         del(meta["ResponseMetadata"])
         return meta
+
+class CloudWatchEventsRuleTargetsPage(TablePage):
+    def __init__(self, event_name):
+        self.event_name = event_name
+
+    def items(self):
+        client = session.client("events", region_name = region)
+        ls = client.list_targets_by_rule(
+            Rule = self.event_name,
+        )
+        items = []
+        for elem in ls["Targets"]:
+            items.append([elem["Id"], elem["Arn"]])
+        return items
+
+    def detailPage(self, item):
+        return CloudWatchEventsRuleTargetPage(self.event_name, item[0])
+
+class CloudWatchEventsRuleTargetPage(ObjectPage):
+    def __init__(self, event_name, target_id):
+        self.event_name = event_name
+        self.target_id = target_id
+
+    def object(self):
+        client = session.client("events", region_name = region)
+        ls = client.list_targets_by_rule(
+            Rule = self.event_name,
+        )
+        items = []
+        for elem in ls["Targets"]:
+            if elem["Id"] == self.target_id:
+                return elem
 
 class CloudWatchLogsPage(TablePage):
     def nameColIdx(self):

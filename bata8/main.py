@@ -43,10 +43,16 @@ class GlobalPage(MenuPage):
     def dig(self, arg):
         if re.match("\\Aarn:.+", arg):
             return GlobalPage.page_from_arn(arg)
+        if re.match("\\As3://", arg):
+            return S3Page.page_from_uri(arg)
         return super().dig(arg)
 
     @classmethod
     def page_from_arn(cls, arn):
+        account_id = fetch_account_id()
+        match = re.match(f"\\Aarn:aws:ecs:{region}:{account_id}:cluster/(.*)\\Z", arn)
+        if match:
+            return ECSClusterPage(match.group(1))
         match = re.match("\\Aarn:aws:s3:::(.+?)/(.*)\\Z", arn)
         if match:
             return S3KeyPage(match.group(1), match.group(2))

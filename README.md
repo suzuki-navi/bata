@@ -49,7 +49,10 @@ Ubuntu 19.10
     cloudwatch                                                                     Menu   awscloudwatch.CloudWatchPage
     cloudwatch events                                                              Menu   awscloudwatch.CloudWatchEventsPage
     cloudwatch events rules                                                        Table  awscloudwatch.CloudWatchEventsRulesPage
-    cloudwatch events rules <RULE_NAME>                                            Object awscloudwatch.CloudWatchEventsRulePage
+    cloudwatch events rules <RULE_NAME>                                            Menu   awscloudwatch.CloudWatchEventsRulePage
+    cloudwatch events rules <RULE_NAME> info                                       Object awscloudwatch.CloudWatchEventsRulePage
+    cloudwatch events rules <RULE_NAME> targets                                    Table  awscloudwatch.CloudWatchEventsRuleTargetsPage
+    cloudwatch events rules <RULE_NAME> targets <TARGET_ID>                        Object awscloudwatch.CloudWatchEventsRuleTargetPage
     cloudwatch logs                                                                Table  awscloudwatch.CloudWatchLogsPage
     cloudwatch logs <LOG_GROUP_NAME>                                               Table  awscloudwatch.CloudWatchLogGroupPage
     cloudwatch logs <LOG_GROUP_NAME> <LOG_STREAM_NAME>                             Table  awscloudwatch.CloudWatchLogStreamEventsPage
@@ -74,6 +77,8 @@ Ubuntu 19.10
     ecr repositories <REPOSITORY_NAME> --alt images <IMAGE_ID>                     Object awsecr.ECRRepositoryImagePage
     ecs                                                                            Menu   awsecs.ECSPage
     ecs clusters                                                                   Table  awsecs.ECSClustersPage
+    ecs clusters <CLUSTER_NAME>                                                    Object awsecs.ECSClusterPage
+    ecs arn:aws:ecs:...                                                            Object awsecs.ECSClusterPage
     ecs tasks                                                                      Table  awsecs.ECSTasksPage
     glue                                                                           Menu   awsglue.GluePage
     glue databases                                                                 Table  awsglue.GlueDatabasesPage
@@ -150,6 +155,7 @@ Ubuntu 19.10
     s3                                                                             Table  awss3.S3Page
     s3 buckets                                                                     Table  awss3.S3BucketsPage
     s3 buckets <BUCKET_NAME>                                                       Table  awss3.S3KeyPage
+    s3 arn:aws:s3:...                                                              Table  awss3.S3KeyPage
     s3 buckets <BUCKET_NAME> --alt                                                 Menu   awss3.S3BucketMetaPage
     s3 buckets <BUCKET_NAME> --alt versioning                                      Object awss3.S3BucketMetaVersioningPage
     s3 buckets <BUCKET_NAME> --alt policy                                          Object awss3.S3BucketMetaPolicyPage

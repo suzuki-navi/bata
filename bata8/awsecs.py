@@ -7,6 +7,9 @@ from bata8.lib import *
 ####################################################################################################
 
 class ECSPage(MenuPage):
+    def canonical(self):
+        return ["ecs"]
+
     def items(self):
         return [
             ("clusters", ECSClustersPage),
@@ -14,6 +17,9 @@ class ECSPage(MenuPage):
         ]
 
 class ECSClustersPage(TablePage):
+    def canonical(self):
+        return ["ecs", "clusters"]
+
     def nameColIdx(self):
         return 0
 
@@ -38,6 +44,12 @@ class ECSClusterPage(ObjectPage):
     def __init__(self, cluster_name):
         self.cluster_name = cluster_name
 
+    def canonical(self):
+        return ["ecs", "clusters", self.cluster_name]
+
+    def arn(self):
+        return "arn:aws:ecs:{}:{}:cluster/{}".format(session.region_name, fetch_account_id(), self.cluster_name)
+
     def alt(self):
         return ECSClusterAltPage(self.cluster_name)
 
@@ -51,6 +63,9 @@ class ECSClusterPage(ObjectPage):
 class ECSClusterAltPage(MenuPage):
     def __init__(self, cluster_name):
         self.cluster_name = cluster_name
+
+    def canonical(self):
+        return ["ecs", "clusters", self.cluster_name, "--alt"]
 
     def items(self):
         return [

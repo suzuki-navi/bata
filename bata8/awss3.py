@@ -19,11 +19,6 @@ class S3Page(MenuPage):
     def items(self):
         return [("buckets", S3BucketsPage)]
 
-    def dig(self, arg):
-        if re.match("\\As3://", arg):
-            return S3Page.page_from_uri(arg)
-        return super().dig(arg)
-
     @classmethod
     def page_from_uri(cls, path):
         match = re.match("\\As3://([^/]+)\\Z", path)
@@ -197,12 +192,18 @@ class S3KeyPage(ObjectPage):
         return "s3://{}/{}".format(self.bucket_name, self.key)
 
     def canonical(self):
-        return ["s3", self.s3path()]
+        return [self.s3path()]
         #if len(self.key) == 0:
         #    paths = []
         #else:
         #    paths = self.key.split("/")
         #return ["s3", "buckets", self.bucket_name] + paths
+
+    def arn(self):
+        if len(self.key) == 0:
+            return "arn:aws:s3:::{}".format(self.bucket_name)
+        else:
+            return "arn:aws:s3:::{}/{}".format(self.bucket_name, self.key)
 
     def alt(self):
         if self.key == "":
@@ -218,12 +219,6 @@ class S3KeyPage(ObjectPage):
             else:
                 cmd = ["aws", "s3", "ls", self.s3path() + "/"]
         return [cmd]
-
-    def arn(self):
-        if len(self.key) == 0:
-            return "arn:aws:s3:::{}".format(self.bucket_name)
-        else:
-            return "arn:aws:s3:::{}/{}".format(self.bucket_name, self.key)
 
     def nameColIdx(self):
         return 0

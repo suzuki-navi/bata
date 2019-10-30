@@ -50,6 +50,7 @@ Ubuntu 19.10
     cloudwatch events                                                              Menu   awscloudwatch.CloudWatchEventsPage
     cloudwatch events rules                                                        Table  awscloudwatch.CloudWatchEventsRulesPage
     cloudwatch events rules <RULE_NAME>                                            Menu   awscloudwatch.CloudWatchEventsRulePage
+    arn:aws:events:<REGION>:<ACCOUNT_ID>:rule/<RULE_NAME>                          Menu   awscloudwatch.CloudWatchEventsRulePage
     cloudwatch events rules <RULE_NAME> info                                       Object awscloudwatch.CloudWatchEventsRulePage
     cloudwatch events rules <RULE_NAME> targets                                    Table  awscloudwatch.CloudWatchEventsRuleTargetsPage
     cloudwatch events rules <RULE_NAME> targets <TARGET_ID>                        Object awscloudwatch.CloudWatchEventsRuleTargetPage
@@ -78,14 +79,16 @@ Ubuntu 19.10
     ecs                                                                            Menu   awsecs.ECSPage
     ecs clusters                                                                   Table  awsecs.ECSClustersPage
     ecs clusters <CLUSTER_NAME>                                                    Object awsecs.ECSClusterPage
-    ecs arn:aws:ecs:...                                                            Object awsecs.ECSClusterPage
+    arn:aws:ecs:<REGION>:<ACCOUNT_ID>:cluster/<CLUSTER_NAME>                       Object awsecs.ECSClusterPage
     ecs tasks                                                                      Table  awsecs.ECSTasksPage
     glue                                                                           Menu   awsglue.GluePage
     glue databases                                                                 Table  awsglue.GlueDatabasesPage
     glue databases <DATABASE_NAME>                                                 Table  awsglue.GlueDatabasePage
+    arn:aws:glue:<REGION>:<ACCOUNT_ID>:database/<DATABASE_NAME>                    Table  awsglue.GlueDatabasePage
     glue databases <DATABASE_NAME> --alt                                           Menu   awsglue.GlueDatabaseAltPage
     glue databases <DATABASE_NAME> --alt info                                      Object awsglue.GlueDatabaseAltInfoPage
     glue databases <DATABASE_NAME> <TABLE_NAME>                                    Object awsglue.GlueTablePage
+    arn:aws:glue:<REGION>:<ACCOUNT_ID>:table/<DATABASE_NAME>/<TABLE_NAME>          Object awsglue.GlueTablePage
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt                              Menu   awsglue.GlueTableAltPage
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt partitions                   Table  awsglue.GlueTablePartitionsPage
     glue databases <DATABASE_NAME> <TABLE_NAME> --alt partitions <PARTITION_VALUE> Object awsglue.GlueTablePartitionPage
@@ -155,7 +158,6 @@ Ubuntu 19.10
     s3                                                                             Table  awss3.S3Page
     s3 buckets                                                                     Table  awss3.S3BucketsPage
     s3 buckets <BUCKET_NAME>                                                       Table  awss3.S3KeyPage
-    s3 arn:aws:s3:...                                                              Table  awss3.S3KeyPage
     s3 buckets <BUCKET_NAME> --alt                                                 Menu   awss3.S3BucketMetaPage
     s3 buckets <BUCKET_NAME> --alt versioning                                      Object awss3.S3BucketMetaVersioningPage
     s3 buckets <BUCKET_NAME> --alt policy                                          Object awss3.S3BucketMetaPolicyPage
@@ -164,6 +166,10 @@ Ubuntu 19.10
     s3 buckets <BUCKET_NAME> --alt metrics count                                   Table  awscloudwatch.CloudWatchMetricsNamespaceMetricDimensionPage
     s3 buckets <BUCKET_NAME> <PREFIX> ...                                          Table  awss3.S3KeyPage
     s3 buckets <BUCKET_NAME> <PREFIX> ... <KEY_NAME>                               Object awss3.S3KeyPage
+    arn:aws:s3:::<BUCKET_NAME>                                                     Table  awss3.S3KeyPage
+    arn:aws:s3:::<BUCKET_NAME>/<KEY_NAME>                                          Object awss3.S3KeyPage
+    s3://<BUCKET_NAME>                                                             Table  awss3.S3KeyPage
+    s3://<BUCKET_NAME>/<KEY_NAME>                                                  Object awss3.S3KeyPage
     sts                                                                            Menu   awsiam.STSPage
     sts caller                                                                     Object awsiam.STSCallerPage
     support                                                                        Menu   awssupport.SupportPage

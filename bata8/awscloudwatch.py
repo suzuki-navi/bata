@@ -43,6 +43,12 @@ class CloudWatchEventsRulePage(MenuPage):
     def __init__(self, event_name):
         self.event_name = event_name
 
+    def canonical(self):
+        return ["cloudwatch", "events", "rules", self.event_name]
+
+    def arn(self):
+        return "arn:aws:events:{}:{}:rule/{}".format(session.region_name, fetch_account_id(), self.event_name)
+
     def items(self):
         return [
             ("info", CloudWatchEventsRuleInfoPage),

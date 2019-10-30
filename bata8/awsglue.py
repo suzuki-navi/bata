@@ -21,6 +21,9 @@ class GluePage(MenuPage):
         ]
 
 class GlueDatabasesPage(TablePage):
+    def canonical(self):
+        return ["glue", "databases"]
+
     def nameColIdx(self):
         return 0
 
@@ -38,6 +41,12 @@ class GlueDatabasesPage(TablePage):
 class GlueDatabasePage(TablePage):
     def __init__(self, database_name):
         self.database_name = database_name
+
+    def canonical(self):
+        return ["glue", "databases", self.database_name]
+
+    def arn(self):
+        return "arn:aws:glue:{}:{}:database/{}".format(session.region_name, fetch_account_id(), self.database_name)
 
     def alt(self):
         return GlueDatabaseAltPage(self.database_name)
@@ -86,6 +95,9 @@ class GlueTablePage(ObjectPage):
         self.database_name = database_name
         self.table_name = table_name
 
+    def canonical(self):
+        return ["glue", "databases", self.database_name, self.table_name]
+
     def _location(self):
         client = session.client("glue", region_name = region)
         info = client.get_table(
@@ -94,6 +106,9 @@ class GlueTablePage(ObjectPage):
         )
         location = info["Table"]["StorageDescriptor"]["Location"]
         return location
+
+    def arn(self):
+        return "arn:aws:glue:{}:{}:table/{}/{}".format(session.region_name, fetch_account_id(), self.database_name, self.table_name)
 
     def alt(self):
         return GlueTableAltPage(self.database_name, self.table_name)

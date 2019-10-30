@@ -50,15 +50,31 @@ class GlobalPage(MenuPage):
     @classmethod
     def page_from_arn(cls, arn):
         account_id = fetch_account_id()
-        match = re.match(f"\\Aarn:aws:ecs:{region}:{account_id}:cluster/(.*)\\Z", arn)
+
+        match = re.match(f"\\Aarn:aws:events:{region}:{account_id}:rule/(.+)\\Z", arn)
+        if match:
+            return CloudWatchEventsRulePage(match.group(1))
+
+        match = re.match(f"\\Aarn:aws:ecs:{region}:{account_id}:cluster/(.+)\\Z", arn)
         if match:
             return ECSClusterPage(match.group(1))
+
+        match = re.match(f"\\Aarn:aws:glue:{region}:{account_id}:database/(.+)\\Z", arn)
+        if match:
+            return GlueDatabasePage(match.group(1))
+
+        match = re.match(f"\\Aarn:aws:glue:{region}:{account_id}:table/(.+?)/(.+)\\Z", arn)
+        if match:
+            return GlueTablePage(match.group(1), match.group(2))
+
         match = re.match("\\Aarn:aws:s3:::(.+?)/(.*)\\Z", arn)
         if match:
             return S3KeyPage(match.group(1), match.group(2))
+
         match = re.match("\\Aarn:aws:s3:::(.+?)\\Z", arn)
         if match:
             return S3KeyPage(match.group(1), "")
+
         return None
 
 ####################################################################################################

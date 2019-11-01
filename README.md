@@ -80,6 +80,8 @@ Ubuntu 19.10
     ecs clusters                                                                   Table  awsecs.ECSClustersPage
     ecs clusters <CLUSTER_NAME>                                                    Object awsecs.ECSClusterPage
     arn:aws:ecs:<REGION>:<ACCOUNT_ID>:cluster/<CLUSTER_NAME>                       Object awsecs.ECSClusterPage
+    ecs clusters <CLUSTER_NAME> --alt                                              Menu   awsecs.ECSClusterAltPage
+    ecs clusters <CLUSTER_NAME> --alt schedules                                    Table  awsecs.ECSClusterSchedulesPage
     ecs tasks                                                                      Table  awsecs.ECSTasksPage
     glue                                                                           Menu   awsglue.GluePage
     glue databases                                                                 Table  awsglue.GlueDatabasesPage

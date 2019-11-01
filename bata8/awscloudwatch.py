@@ -18,12 +18,18 @@ class CloudWatchPage(MenuPage):
         ]
 
 class CloudWatchEventsPage(MenuPage):
+    def canonical(self):
+        return ["cloudwatch", "events"]
+
     def items(self):
         return [
             ("rules", CloudWatchEventsRulesPage),
         ]
 
 class CloudWatchEventsRulesPage(TablePage):
+    def canonical(self):
+        return ["cloudwatch", "events", "rules"]
+
     def nameColIdx(self):
         return 0
 
@@ -101,6 +107,17 @@ class CloudWatchEventsRuleTargetPage(ObjectPage):
         for elem in ls["Targets"]:
             if elem["Id"] == self.target_id:
                 return elem
+
+    @classmethod
+    def page_from_target_arn(cls, event_name, target_arn):
+        client = session.client("events", region_name = region)
+        ls = client.list_targets_by_rule(
+            Rule = event_name,
+        )
+        items = []
+        for elem in ls["Targets"]:
+            if elem["Arn"] == target_arn:
+                return CloudWatchEventsRuleTargetPage(event_name, elem["Id"])
 
 class CloudWatchLogsPage(TablePage):
     def nameColIdx(self):

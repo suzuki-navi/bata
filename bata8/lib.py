@@ -12,19 +12,27 @@ session = boto3.session.Session()
 region = "ap-northeast-1" # TODO
 #region = "us-west-2" # TODO
 
+opt_quiet = False
+
 args = sys.argv[1:]
 
 bata8_cmd = ["bata8"]
+aws_cmd = ["aws"]
 
 while True:
     if len(args) > 1 and args[0] == "--profile":
         bata8_cmd = bata8_cmd + ["--profile", args[1]]
+        aws_cmd   = aws_cmd   + ["--profile", args[1]]
         session = boto3.session.Session(profile_name = args[1])
         args = args[2:]
     elif len(args) > 1 and args[0] == "--region":
         bata8_cmd = bata8_cmd + ["--region", args[1]]
+        aws_cmd   = aws_cmd   + ["--region", args[1]]
         region = args[1]
         args = args[2:]
+    elif len(args) > 0 and (args[0] == "-q" or args[0] == "--quiet"):
+        opt_quiet = True
+        args = args[1:]
     else:
         break
 
@@ -135,25 +143,21 @@ class Page:
         if (len(args) == 0):
             page = self._digs(args)
             page._view()
-        elif args[-1] == "--alt":
-            page = self._digs(args)
-            page._view()
-        elif args[-1] == "--help":
-            page = self._digs(args)
-            page._view()
-        elif args[-1].startswith("-"):
-            sys.stderr.write("Unknown option: {}".format(args[-1]))
-            sys.exit(1)
         else:
             self._digs(args)._view()
 
     def _view(self):
         canonical = self.canonical()
-        if sys.stdout.isatty():
+        if not opt_quiet and sys.stdout.isatty():
             f = False
             if canonical != None:
-                print("# canonical: " + normalize_command_args(bata8_cmd + canonical))
-                f = True
+                if isinstance(canonical, list) and len(canonical) > 0 and isinstance(canonical[0], list):
+                    for elem in canonical:
+                        print("# canonical: " + normalize_command_args(bata8_cmd + elem))
+                        f = True
+                else:
+                    print("# canonical: " + normalize_command_args(bata8_cmd + canonical))
+                    f = True
             arn = self.arn()
             if arn != None:
                 print("# canonical: " + normalize_command_args(bata8_cmd + [arn]))
@@ -162,24 +166,24 @@ class Page:
             if alt_page != None:
                 if isinstance(alt_page, MenuPage):
                     for item in alt_page.items():
-                        print("# see-also: ... --alt {}".format(item[0]))
+                        print("# see-also:  ... --alt {}".format(item[0]))
                         f = True
                 else:
-                    print("# see-also: ... --alt")
+                    print("# see-also:  ... --alt")
                     f = True
             help_page = self.help()
             if help_page != None:
                 if isinstance(help_page, MenuPage):
                     for item in help_page.items():
-                        print("# see-also: ... --help {}".format(item[0]))
+                        print("# see-also:  ... --help {}".format(item[0]))
                         f = True
                 else:
-                    print("# see-also: ... --help")
+                    print("# see-also:  ... --help")
                     f = True
             see_also_list = self.see_also()
             if see_also_list != None:
                 for see_also in see_also_list:
-                    print("# see-also: " + normalize_command_args(see_also))
+                    print("# see-also:  " + normalize_command_args(see_also))
                     f = True
             if f:
                 print("")
@@ -200,7 +204,7 @@ class Page:
                     sys.stderr.write("Help page not found")
                     sys.exit(1)
             elif a.startswith("-"):
-                sys.stderr.write("Unknown option: {}".format(args[-1]))
+                sys.stderr.write("Unknown option: {}".format(a))
                 sys.exit(1)
             else:
                 page = page.dig(a)

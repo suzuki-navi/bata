@@ -64,6 +64,12 @@ class CloudWatchEventsRulePage(MenuPage):
     def detailPage(self, item):
         return item[1](self.event_name)
 
+    @classmethod
+    def page_from_arn(cls, arn, account_id, region):
+        match = re.match(f"\\Aarn:aws:events:{region}:{account_id}:rule/(.+)\\Z", arn)
+        if match:
+            return CloudWatchEventsRulePage(match.group(1))
+
 class CloudWatchEventsRuleInfoPage(ObjectPage):
     def __init__(self, event_name):
         self.event_name = event_name

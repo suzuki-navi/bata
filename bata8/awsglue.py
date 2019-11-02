@@ -67,6 +67,12 @@ class GlueDatabasePage(TablePage):
     def detailPage(self, item):
         return GlueTablePage(self.database_name, item[0])
 
+    @classmethod
+    def page_from_arn(cls, arn, account_id, region):
+        match = re.match(f"\\Aarn:aws:glue:{region}:{account_id}:database/(.+)\\Z", arn)
+        if match:
+            return GlueDatabasePage(match.group(1))
+
 class GlueDatabaseAltPage(MenuPage):
     def __init__(self, database_name):
         self.database_name = database_name
@@ -120,6 +126,12 @@ class GlueTablePage(ObjectPage):
             Name = self.table_name,
         )
         return info["Table"]
+
+    @classmethod
+    def page_from_arn(cls, arn, account_id, region):
+        match = re.match(f"\\Aarn:aws:glue:{region}:{account_id}:table/(.+?)/(.+)\\Z", arn)
+        if match:
+            return GlueTablePage(match.group(1), match.group(2))
 
 class GlueTableAltPage(MenuPage):
     def __init__(self, database_name, table_name):

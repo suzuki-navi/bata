@@ -128,6 +128,7 @@ Ubuntu 19.10
     lambda                                                                         Menu   awslambda.LambdaPage
     lambda functions                                                               Table  awslambda.LambdaFunctionsPage
     lambda functions <FUNCTION_NAME>                                               Menu   awslambda.LambdaFunctionPage
+    arn:aws:lambda:<REGION>:<ACCOUNT_ID>:function:<CLUSTER_NAME>                   Menu   awslambda.LambdaFunctionPage
     lambda functions <FUNCTION_NAME> code                                          Object awslambda.LambdaFunctionCodePage
     lambda functions <FUNCTION_NAME> code --help                                   Object awslambda.LambdaFunctionCodeHelpPage
     lambda functions <FUNCTION_NAME> configuration                                 Object awslambda.LambdaFunctionConfigurationPage

@@ -234,5 +234,15 @@ class S3KeyPage(ObjectPage):
         key = self._prefix() + item[0]
         return S3KeyPage(self.bucket_name, key)
 
+    @classmethod
+    def page_from_arn(cls, arn, account_id, region):
+        match = re.match("\\Aarn:aws:s3:::(.+?)/(.*)\\Z", arn)
+        if match:
+            return S3KeyPage(match.group(1), match.group(2))
+
+        match = re.match("\\Aarn:aws:s3:::(.+?)\\Z", arn)
+        if match:
+            return S3KeyPage(match.group(1), "")
+
 ####################################################################################################
 

@@ -62,6 +62,12 @@ class ECSClusterPage(ObjectPage):
         )
         return info["clusters"][0]
 
+    @classmethod
+    def page_from_arn(cls, arn, account_id, region):
+        match = re.match(f"\\Aarn:aws:ecs:{region}:{account_id}:cluster/(.+)\\Z", arn)
+        if match:
+            return ECSClusterPage(match.group(1))
+
 class ECSClusterAltPage(MenuPage):
     def __init__(self, cluster_name):
         self.cluster_name = cluster_name

@@ -47,6 +47,9 @@ class LambdaFunctionPage(MenuPage):
     def canonical(self):
         return ["lambda", "functions", self.function_name]
 
+    def arn(self):
+        return "arn:aws:lambda:{}:{}:function:{}".format(session.region_name, fetch_account_id(), self.function_name)
+
     def items(self):
         return [
             ("code", LambdaFunctionCodePage),
@@ -57,6 +60,12 @@ class LambdaFunctionPage(MenuPage):
 
     def detailPage(self, item):
         return item[1](self.function_name)
+
+    @classmethod
+    def page_from_arn(cls, arn, account_id, region):
+        match = re.match(f"\\Aarn:aws:lambda:{region}:{account_id}:function:(.+)\\Z", arn)
+        if match:
+            return LambdaFunctionPage(match.group(1))
 
 class LambdaFunctionCodePage(ObjectPage):
     def __init__(self, function_name):

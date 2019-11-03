@@ -8,7 +8,7 @@ import boto3
 
 ####################################################################################################
 
-session = boto3.session.Session()
+profile = None
 region = "ap-northeast-1" # TODO
 #region = "us-west-2" # TODO
 
@@ -23,7 +23,7 @@ while True:
     if len(args) > 1 and args[0] == "--profile":
         bata8_cmd = bata8_cmd + ["--profile", args[1]]
         aws_cmd   = aws_cmd   + ["--profile", args[1]]
-        session = boto3.session.Session(profile_name = args[1])
+        profile = args[1]
         args = args[2:]
     elif len(args) > 1 and args[0] == "--region":
         bata8_cmd = bata8_cmd + ["--region", args[1]]
@@ -35,6 +35,15 @@ while True:
         args = args[1:]
     else:
         break
+
+if profile != None and region != None:
+    session = boto3.session.Session(profile_name = profile, region_name = region)
+elif profile != None:
+    session = boto3.session.Session(profile_name = profile)
+elif region != None:
+    session = boto3.session.Session(region_name = region)
+else:
+    session = boto3.session.Session()
 
 ####################################################################################################
 

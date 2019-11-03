@@ -116,6 +116,7 @@ Ubuntu 19.10
     iam users <USER_NAME> policies <POLICY_NAME>                                   Menu   awsiam.IAMPolicyPage
     iam roles                                                                      Table  awsiam.IAMRolesPage
     iam roles <ROLE_NAME>                                                          Table  awsiam.IAMRolePage
+    arn:aws:iam::<ACCOUNT_ID>:role<ROLE_PATH><ROLE_NAME>                           Object awsiam.IAMRoleInfoPage
     iam roles <ROLE_NAME> --alt                                                    Menu   awsiam.IAMRoleAltPage
     iam roles <ROLE_NAME> --alt info                                               Object awsiam.IAMRoleInfoPage
     iam roles <ROLE_NAME> <POLICY_NAME>                                            Not implemented
@@ -173,6 +174,17 @@ Ubuntu 19.10
     arn:aws:s3:::<BUCKET_NAME>/<KEY_NAME>                                          Object awss3.S3KeyPage
     s3://<BUCKET_NAME>                                                             Table  awss3.S3KeyPage
     s3://<BUCKET_NAME>/<KEY_NAME>                                                  Object awss3.S3KeyPage
+    sagemaker                                                                      Menu   awssagemaker.SageMakerPage
+    sagemaker notebook                                                             Menu   awssagemaker.SageMakerNotebookPage
+    sagemaker notebook instances                                                   Table  awssagemaker.SageMakerNotebookInstancesPage
+    sagemaker notebook instances <INSTANCE_NAME>                                   Object awssagemaker.SageMakerNotebookInstancePage
+    arn:aws:sagemaker:<REGION>:<ACCOUNT_ID>:notebook-instanc/<INSTANCE_NAME>       Object awssagemaker.SageMakerNotebookInstancePage
+    sagemaker training                                                             Menu   awssagemaker.SageMakerTrainingPage
+    sagemaker training jobs                                                        Table  awssagemaker.SageMakerTrainingJobsPage
+    sagemaker training jobs <JOB_NAME>                                             Object awssagemaker.SageMakerTrainingJobPage
+    sagemaker models                                                               Table  awssagemaker.SageMakerModelsPage
+    sagemaker models <MODEL_NAME>                                                  Object awssagemaker.SageMakerModelPage
+    arn:aws:sagemaker:<REGION>:<ACCOUNT_ID>:model/<MODEL_NAME>                     Object awssagemaker.SageMakerModelPage
     sts                                                                            Menu   awsiam.STSPage
     sts caller                                                                     Object awsiam.STSCallerPage
     support                                                                        Menu   awssupport.SupportPage

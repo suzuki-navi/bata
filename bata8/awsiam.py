@@ -88,10 +88,12 @@ class IAMRolesPage(TablePage):
     def items(self):
         client = session.client("iam")
         ls = client.list_roles(
+            MaxItems = 1000,
         )
         items = []
         for elem in ls["Roles"]:
-            items.append([elem["RoleName"]])
+            items.append([elem["RoleName"], elem["Path"]])
+        items.sort()
         return items
 
     def detailPage(self, item):
@@ -137,16 +139,37 @@ class IAMRoleAltPage(MenuPage):
     def detailPage(self, item):
         return item[1](self.role_name)
 
+# これをIAMRolePageにしたほうがいいのかな?
 class IAMRoleInfoPage(ObjectPage):
     def __init__(self, role_name):
         self.role_name = role_name
+        self._info = None
 
-    def object(self):
+    def _fetch_info(self):
         client = session.client("iam")
-        meta = client.get_role(
+        info = client.get_role(
             RoleName = self.role_name,
         )
-        return meta["Role"]
+        return info["Role"]
+
+    def info(self):
+        if self._info == None:
+            self._info = self._fetch_info();
+        return self._info
+
+    def arn(self):
+        info = self.info()
+        path = info["Path"]
+        return "arn:aws:iam::{}:role{}{}".format(fetch_account_id(), path, self.role_name)
+
+    def object(self):
+        return self.info()
+
+    @classmethod
+    def page_from_arn(cls, arn, account_id, region):
+        match = re.match(f"\\Aarn:aws:iam::{account_id}:role/(.+/)?([^/]+)\\Z", arn)
+        if match:
+            return IAMRoleInfoPage(match.group(2))
 
 class IAMPoliciesPage(TablePage):
     def nameColIdx(self):

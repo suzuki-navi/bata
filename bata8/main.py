@@ -15,6 +15,7 @@ from bata8.awslambda import *
 from bata8.awsrds import *
 from bata8.awsredshift import *
 from bata8.awss3 import *
+from bata8.awssagemaker import *
 from bata8.awssupport import *
 from bata8.awsvpc import *
 
@@ -35,6 +36,7 @@ class GlobalPage(MenuPage):
             ("rds", RDSPage),
             ("redshift", RedshiftPage),
             ("s3", S3Page),
+            ("sagemaker", SageMakerPage),
             ("sts", STSPage),
             ("support", SupportPage),
             ("vpc", VPCPage),
@@ -67,11 +69,23 @@ class GlobalPage(MenuPage):
         if page != None:
             return page
 
+        page = IAMRoleInfoPage.page_from_arn(arn, account_id, region)
+        if page != None:
+            return page
+
         page = LambdaFunctionPage.page_from_arn(arn, account_id, region)
         if page != None:
             return page
 
         page = S3KeyPage.page_from_arn(arn, account_id, region)
+        if page != None:
+            return page
+
+        page = SageMakerNotebookInstancePage.page_from_arn(arn, account_id, region)
+        if page != None:
+            return page
+
+        page = SageMakerModelPage.page_from_arn(arn, account_id, region)
         if page != None:
             return page
 

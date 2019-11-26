@@ -109,6 +109,13 @@ Ubuntu 19.10
     glue jobs <JOB_NAME> history <RUN_ID>                                          Object awsglue.GlueJobRunPage
     glue jobs <JOB_NAME> role                                                      Table  awsiam.IAMRolePage
     iam                                                                            Menu   awsiam.IAMPage
+    iam groups                                                                     Table  awsiam.IAMGroupsPage
+    iam groups <GROUP_NAME>                                                        Menu   awsiam.IAMGroupPage
+    iam groups <GROUP_NAME> info                                                   Object awsiam.IAMGroupInfoPage
+    iam groups <GROUP_NAME> users                                                  Table  awsiam.IAMGroupUsersPage
+    iam groups <GROUP_NAME> users <USER_NAME>                                      Object awsiam.IAMUserPage
+    iam groups <GROUP_NAME> policies                                               Table  awsiam.IAMGroupPoliciesPage
+    iam groups <GROUP_NAME> policies <POLICY_NAME>                                 Menu   awsiam.IAMPolicyPage
     iam users                                                                      Table  awsiam.IAMUsersPage
     iam users <USER_NAME>                                                          Menu   awsiam.IAMUserPage
     iam users <USER_NAME> info                                                     Object awsiam.IAMUserInfoPage

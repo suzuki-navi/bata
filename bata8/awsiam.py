@@ -9,10 +9,99 @@ from bata8.lib import *
 class IAMPage(MenuPage):
     def items(self):
         return [
+            ("groups", IAMGroupsPage),
             ("users", IAMUsersPage),
             ("roles", IAMRolesPage),
             ("policies", IAMPoliciesPage),
         ]
+
+class IAMGroupsPage(TablePage):
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("iam")
+        ls = client.list_groups(
+        )
+        items = []
+        for elem in ls["Groups"]:
+            items.append([elem["GroupName"], elem["GroupId"]])
+        return items
+
+    def detailPage(self, item):
+        return IAMGroupPage(item[0])
+
+class IAMGroupPage(MenuPage):
+    def __init__(self, group_name):
+        self.group_name = group_name
+
+    def items(self):
+        return [
+            ("info", IAMGroupInfoPage),
+            ("users", IAMGroupUsersPage),
+            ("policies", IAMGroupPoliciesPage),
+        ]
+
+    def detailPage(self, item):
+        return item[1](self.group_name)
+
+class IAMGroupInfoPage(ObjectPage):
+    def __init__(self, group_name):
+        self.group_name = group_name
+
+    def object(self):
+        client = session.client("iam")
+        info = client.get_group(
+            GroupName = self.group_name,
+        )
+        return info["Group"]
+
+class IAMGroupUsersPage(TablePage):
+    def __init__(self, group_name):
+        self.group_name = group_name
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("iam")
+        ls = client.get_group(
+            GroupName = self.group_name,
+        )
+        items = []
+        for elem in ls["Users"]:
+            items.append([elem["UserName"]])
+        return items
+
+    def detailPage(self, item):
+        return IAMUserPage(item[0])
+
+class IAMGroupPoliciesPage(TablePage):
+    def __init__(self, group_name):
+        self.group_name = group_name
+
+    def nameColIdx(self):
+        return 0
+
+    def items(self):
+        client = session.client("iam")
+        items = []
+        ls = client.list_group_policies(
+            GroupName = self.group_name,
+        )
+        for elem in ls["PolicyNames"]:
+            items.append([elem, "-"])
+        ls = client.list_attached_group_policies(
+            GroupName = self.group_name,
+        )
+        for elem in ls["AttachedPolicies"]:
+            items.append([elem["PolicyName"], elem["PolicyArn"]])
+        return items
+
+    def detailPage(self, item):
+        if item[1] == "-":
+            return None
+        return IAMPolicyPage(item[0], item[1])
 
 class IAMUsersPage(TablePage):
     def nameColIdx(self):
